@@ -1,1 +1,6 @@
-"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("api",{getProducts:()=>e.ipcRenderer.invoke("products:get"),addProduct:r=>e.ipcRenderer.invoke("products:add",r)});
+"use strict";
+const electron = require("electron");
+electron.contextBridge.exposeInMainWorld("api", {
+  getProducts: () => electron.ipcRenderer.invoke("products:get"),
+  addProduct: (product) => electron.ipcRenderer.invoke("products:add", product)
+});

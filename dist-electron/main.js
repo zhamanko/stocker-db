@@ -1,13 +1,17 @@
-import { app as a, ipcMain as d, BrowserWindow as E } from "electron";
-import { fileURLToPath as g } from "node:url";
-import o from "node:path";
-import L from "better-sqlite3";
-import s from "path";
-import p from "fs";
-import { fileURLToPath as f } from "url";
-function _(e) {
-  const n = (R) => !!e.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(R);
-  n("products") ? console.log('ℹ️ Table "products" already exists') : (e.exec(`
+import { app, ipcMain, BrowserWindow } from "electron";
+import { fileURLToPath as fileURLToPath$1 } from "node:url";
+import path$1 from "node:path";
+import Database from "better-sqlite3";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+function createTables(db2) {
+  const tableExists = (name) => {
+    const row = db2.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(name);
+    return !!row;
+  };
+  if (!tableExists("products")) {
+    db2.exec(`
       CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL,
@@ -16,36 +20,50 @@ function _(e) {
         quantity INTEGER DEFAULT 0,
         price REAL DEFAULT 0
       );
-    `), console.log('✅ Table "products" created')), n("categories") || (e.exec(`
+    `);
+    console.log('✅ Table "products" created');
+  } else {
+    console.log('ℹ️ Table "products" already exists');
+  }
+  if (!tableExists("categories")) {
+    db2.exec(`
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
       );
-    `), console.log('✅ Table "categories" created'));
+    `);
+    console.log('✅ Table "categories" created');
+  }
 }
-const A = f(import.meta.url), P = s.dirname(A), I = a.isPackaged, i = I ? s.join(process.resourcesPath, "database") : s.join(P, "database"), N = s.join(i, "app.db");
-p.existsSync(i) || p.mkdirSync(i, { recursive: !0 });
-const r = new L(N);
-r.pragma("journal_mode = WAL");
-r.pragma("foreign_keys = ON");
-function O() {
-  _(r);
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$2 = path.dirname(__filename$1);
+const isProd = app.isPackaged;
+const basePath = isProd ? path.join(process.resourcesPath, "database") : path.join(__dirname$2, "database");
+const dbPath = path.join(basePath, "app.db");
+if (!fs.existsSync(basePath)) {
+  fs.mkdirSync(basePath, { recursive: true });
 }
-const l = {
+const db = new Database(dbPath);
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+function initDb() {
+  createTables(db);
+}
+const ProductRepo = {
   getAll() {
-    return r.prepare("SELECT * FROM products").all();
+    return db.prepare(`SELECT * FROM products`).all();
   },
-  getById(e) {
-    return r.prepare("SELECT * FROM products WHERE id = ?").get(e);
+  getById(id) {
+    return db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
   },
-  create(e) {
-    return r.prepare(`
+  create(product) {
+    return db.prepare(`
       INSERT INTO products (code, name, category, quantity, price)
       VALUES (@code, @name, @category, @quantity, @price)
-    `).run(e);
+    `).run(product);
   },
-  update(e, n) {
-    return r.prepare(`
+  update(id, product) {
+    return db.prepare(`
       UPDATE products
       SET code = @code,
           name = @name,
@@ -53,40 +71,59 @@ const l = {
           quantity = @quantity,
           price = @price
       WHERE id = @id
-    `).run({ ...n, id: e });
+    `).run({ ...product, id });
   },
-  delete(e) {
-    return r.prepare("DELETE FROM products WHERE id = ?").run(e);
+  delete(id) {
+    return db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
   }
 };
-d.handle("products:get", () => l.getAll());
-d.handle("products:add", (e, n) => (l.create(n), !0));
-const T = o.dirname(g(import.meta.url));
-process.env.APP_ROOT = o.join(T, "..");
-const c = process.env.VITE_DEV_SERVER_URL, v = o.join(process.env.APP_ROOT, "dist-electron"), u = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = c ? o.join(process.env.APP_ROOT, "public") : u;
-let t;
-function m() {
-  t = new E({
-    icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+ipcMain.handle("products:get", () => {
+  return ProductRepo.getAll();
+});
+ipcMain.handle("products:add", (_, product) => {
+  ProductRepo.create(product);
+  return true;
+});
+const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
+process.env.APP_ROOT = path$1.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path$1.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path$1.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$1.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path$1.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: o.join(T, "preload.mjs")
+      preload: path$1.join(__dirname$1, "preload.mjs")
     }
-  }), t.webContents.on("did-finish-load", () => {
-    t == null || t.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), c ? t.loadURL(c) : t.loadFile(o.join(u, "index.html"));
+  });
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path$1.join(RENDERER_DIST, "index.html"));
+  }
 }
-a.on("window-all-closed", () => {
-  process.platform !== "darwin" && (a.quit(), t = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-a.on("activate", () => {
-  E.getAllWindows().length === 0 && m();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-a.whenReady().then(() => {
-  O(), m();
+app.whenReady().then(() => {
+  initDb();
+  createWindow();
 });
 export {
-  v as MAIN_DIST,
-  u as RENDERER_DIST,
-  c as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
