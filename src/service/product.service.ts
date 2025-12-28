@@ -10,3 +10,11 @@ export async function fetchProducts( page: number, search: string) {
 export async function createProduct(product: Product) {
   await api.addProduct(product)
 }
+
+export async function updateProduct(product: Product) {
+  await api.updatedProduct(product)
+}
+
+export async function deleteProduct(id: number) {
+  await api.deleteProduct(id)
+}

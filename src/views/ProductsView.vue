@@ -2,7 +2,7 @@
 import ProductForm from '../components/ProductForm.vue'
 
 import { computed, watch, ref } from 'vue'
-import { fetchProducts, createProduct } from '../service/product.service'
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../service/product.service'
 import { Product } from './../api/api'
 
 let searchTimeout: number | null = null
@@ -59,8 +59,16 @@ function save(item: Product) {
             loadProducts()
         })
     } else {
-        console.log('Оновлення товару', item)
+        updateProduct(item).then(() => {
+            loadProducts()
+        })
     }
+}
+
+function deleteProducte(id: number) {
+    deleteProduct(id).then(() => {
+        loadProducts()
+    })
 }
 
 function onSearchInput(value: string) {
@@ -121,7 +129,7 @@ loadProducts()
                 <td>{{ product.price }}</td>
                 <td><div class="space-x-2">
                     <button @click="selectedProduct = product; openModal = true">Редагувати</button>
-                    <button>Видалити</button>
+                    <button @click="product.id !== undefined && deleteProducte(product.id)">Видалити</button>
                 </div></td>
             </tr>
         </tbody>
@@ -137,6 +145,6 @@ loadProducts()
     </button>
     </div>
 
-    <ProductForm v-if="openModal" @close="openModal = false" :item="selectedProduct" @save="save"/>
+    <ProductForm v-if="openModal" @close="openModal = false; selectedProduct = null" :item="selectedProduct" @save="save"/>
 
 </template>

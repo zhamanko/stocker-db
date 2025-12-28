@@ -128,6 +128,17 @@ ipcMain.handle("products:add", (_, product) => {
   ProductRepo.create(product);
   return true;
 });
+ipcMain.handle("products:update", (_, product) => {
+  if (!product.id) {
+    throw new Error("Product ID is required for update");
+  }
+  ProductRepo.update(product.id, product);
+  return true;
+});
+ipcMain.handle("products:delete", (_, id) => {
+  ProductRepo.delete(id);
+  return true;
+});
 const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
