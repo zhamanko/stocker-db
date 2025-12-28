@@ -1,14 +1,14 @@
-import { Database } from 'better-sqlite3'
+import { Database } from "better-sqlite3";
 
 export function createTables(db: Database) {
   const tableExists = (name: string) => {
     const row = db
       .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
-      .get(name)
-    return !!row
-  }
+      .get(name);
+    return !!row;
+  };
 
-  if (!tableExists('products')) {
+  if (!tableExists("products")) {
     db.exec(`
       CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,20 +18,41 @@ export function createTables(db: Database) {
         quantity INTEGER DEFAULT 0,
         price REAL DEFAULT 0
       );
-    `)
-    console.log('✅ Table "products" created')
+    `);
+    console.log('✅ Table "products" created');
   } else {
-    console.log('ℹ️ Table "products" already exists')
+    console.log('ℹ️ Table "products" already exists');
   }
 
-  // Аналогічно для інших таблиць
-  if (!tableExists('categories')) {
+  if (!tableExists("operations")) {
     db.exec(`
-      CREATE TABLE categories (
+      CREATE TABLE operations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
+
+        type TEXT NOT NULL,
+        date TEXT DEFAULT CURRENT_TIMESTAMP,
+        comment TEXT
       );
-    `)
-    console.log('✅ Table "categories" created')
+    `);
+    console.log('✅ Table "operations" created');
+  } else {
+    console.log('ℹ️ Table "operations" already exists');
+  }
+
+  if (!tableExists("operation_items")) {
+    db.exec(`
+      CREATE TABLE operation_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        operation_id INTEGER NOT NULL, 
+        product_id INTEGER NOT NULL,
+
+        quantity INTEGER NOT NULL,
+        price REAL NOT NULL
+      );
+    `);
+    console.log('✅ Table "operation_items" created');
+  } else {
+    console.log('ℹ️ Table "operation_items" already exists');
   }
 }

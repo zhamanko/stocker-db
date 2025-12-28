@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import ProductForm from '../components/ProductForm.vue'
+
 import { computed, watch, ref } from 'vue'
-import { fetchProducts } from '../service/product.service'
+import { fetchProducts, createProduct } from '../service/product.service'
 import { Product } from './../api/api'
 
 let searchTimeout: number | null = null
+
+const openModal = ref(false)
+const selectedProduct = ref<Product | null>(null)
 
 const products = ref<Product[]>([])
 const totalPages = ref(0)
@@ -15,6 +20,7 @@ type SortKey = keyof Product | null
 
 const sortKey = ref<keyof Product | null>(null)
 const sortDir = ref<'asc' | 'desc'>('asc')
+
 
 const sortedProducts = computed(() => {
     if (!sortKey.value) return products.value
@@ -45,6 +51,16 @@ async function loadProducts(p = page.value, s = search.value) {
     const res = await fetchProducts(p, s)
     products.value = res.items
     total.value = res.total
+}
+
+function save(item: Product) {
+    if (item.id == null) {
+        createProduct(item).then(() => {
+            loadProducts()
+        })
+    } else {
+        console.log('Оновлення товару', item)
+    }
 }
 
 function onSearchInput(value: string) {
@@ -81,6 +97,7 @@ loadProducts()
 
 <template>
     <input v-model="search" @input="onSearchInput(search)" placeholder="Пошук..." />
+        <button @click="openModal = true">Додати товар</button>
 
     <table>
         <thead>
@@ -103,7 +120,7 @@ loadProducts()
                 <td>{{ product.quantity }}</td>
                 <td>{{ product.price }}</td>
                 <td><div class="space-x-2">
-                    <button>Редагувати</button>
+                    <button @click="selectedProduct = product; openModal = true">Редагувати</button>
                     <button>Видалити</button>
                 </div></td>
             </tr>
@@ -119,5 +136,7 @@ loadProducts()
         →
     </button>
     </div>
+
+    <ProductForm v-if="openModal" @close="openModal = false" :item="selectedProduct" @save="save"/>
 
 </template>

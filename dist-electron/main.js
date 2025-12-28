@@ -25,14 +25,35 @@ function createTables(db2) {
   } else {
     console.log('ℹ️ Table "products" already exists');
   }
-  if (!tableExists("categories")) {
+  if (!tableExists("operations")) {
     db2.exec(`
-      CREATE TABLE categories (
+      CREATE TABLE operations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
+
+        type TEXT NOT NULL,
+        date TEXT DEFAULT CURRENT_TIMESTAMP,
+        comment TEXT
       );
     `);
-    console.log('✅ Table "categories" created');
+    console.log('✅ Table "operations" created');
+  } else {
+    console.log('ℹ️ Table "operations" already exists');
+  }
+  if (!tableExists("operation_items")) {
+    db2.exec(`
+      CREATE TABLE operation_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        operation_id INTEGER NOT NULL, 
+        product_id INTEGER NOT NULL,
+
+        quantity INTEGER NOT NULL,
+        price REAL NOT NULL
+      );
+    `);
+    console.log('✅ Table "operation_items" created');
+  } else {
+    console.log('ℹ️ Table "operation_items" already exists');
   }
 }
 const __filename$1 = fileURLToPath(import.meta.url);
