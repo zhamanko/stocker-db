@@ -50,20 +50,40 @@ function initDb() {
   createTables(db);
 }
 const ProductRepo = {
-  getAll() {
-    return db.prepare(`SELECT * FROM products`).all();
+  getList({ search = "", limit = 50, offset = 0 }) {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search` : "";
+    return db.prepare(
+      `SELECT * FROM products
+        ${where}
+        LIMIT @limit OFFSET @offset`
+    ).all({
+      search: `%${search}%`,
+      limit,
+      offset
+    });
+  },
+  count(search = "") {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search` : "";
+    const result = db.prepare(
+      `SELECT COUNT(*) as count 
+        FROM products ${where}`
+    ).get({ search: `%${search}%` });
+    return result.count;
   },
   getById(id) {
     return db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
   },
   create(product) {
-    return db.prepare(`
+    return db.prepare(
+      `
       INSERT INTO products (code, name, category, quantity, price)
       VALUES (@code, @name, @category, @quantity, @price)
-    `).run(product);
+    `
+    ).run(product);
   },
   update(id, product) {
-    return db.prepare(`
+    return db.prepare(
+      `
       UPDATE products
       SET code = @code,
           name = @name,
@@ -71,14 +91,17 @@ const ProductRepo = {
           quantity = @quantity,
           price = @price
       WHERE id = @id
-    `).run({ ...product, id });
+    `
+    ).run({ ...product, id });
   },
   delete(id) {
     return db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
   }
 };
-ipcMain.handle("products:get", () => {
-  return ProductRepo.getAll();
+ipcMain.handle("products:list", (_e, params) => {
+  const items = ProductRepo.getList(params);
+  const total = ProductRepo.count(params.search || "");
+  return { items, total };
 });
 ipcMain.handle("products:add", (_, product) => {
   ProductRepo.create(product);
