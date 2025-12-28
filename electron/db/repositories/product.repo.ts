@@ -16,6 +16,22 @@ export type ProductFilter = {
 };
 
 export const ProductRepo = {
+
+  getListInput(search?: string) {
+    const where = search
+      ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search LIMIT 10`
+      : "";
+
+    return db
+      .prepare(
+        `SELECT * FROM products
+        ${where}`
+      )
+      .all({
+        search: `%${search}%`,
+      }) as Product[]
+  },
+
   getList({ search = "", limit = 50, offset = 0 }: ProductFilter) {
     const where = search
       ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search`

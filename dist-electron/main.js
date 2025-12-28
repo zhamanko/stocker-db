@@ -71,6 +71,15 @@ function initDb() {
   createTables(db);
 }
 const ProductRepo = {
+  getListInput(search) {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search LIMIT 10` : "";
+    return db.prepare(
+      `SELECT * FROM products
+        ${where}`
+    ).all({
+      search: `%${search}%`
+    });
+  },
   getList({ search = "", limit = 50, offset = 0 }) {
     const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search` : "";
     return db.prepare(
@@ -138,6 +147,12 @@ ipcMain.handle("products:update", (_, product) => {
 ipcMain.handle("products:delete", (_, id) => {
   ProductRepo.delete(id);
   return true;
+});
+ipcMain.handle("products:getById", (_, id) => {
+  return ProductRepo.getById(id);
+});
+ipcMain.handle("products:getListInput", (_, params) => {
+  return ProductRepo.getListInput(params);
 });
 const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");

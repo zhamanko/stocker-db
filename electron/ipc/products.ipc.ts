@@ -24,3 +24,11 @@ ipcMain.handle('products:delete', (_, id) => {
   ProductRepo.delete(id)
   return true
 })
+
+ipcMain.handle('products:getById', (_, id) => {
+  return ProductRepo.getById(id)
+})
+
+ipcMain.handle('products:getListInput', (_, params) => {
+  return ProductRepo.getListInput(params)
+}) 

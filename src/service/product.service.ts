@@ -18,3 +18,11 @@ export async function updateProduct(product: Product) {
 export async function deleteProduct(id: number) {
   await api.deleteProduct(id)
 }
+
+export async function getProductById(id: number): Promise<Product | undefined> {
+  return await api.getProductById(id)
+}
+
+export async function getProductListInput(search: string) {
+  return await api.getProductListInput(search);
+}

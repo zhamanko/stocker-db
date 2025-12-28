@@ -19,6 +19,8 @@ declare global {
       addProduct: (product: Product) => Promise<void>
       updatedProduct: (product: Product) => Promise<void>
       deleteProduct: (id: number) => Promise<void>
+      getProductById: (id: number) => Promise<Product | undefined>
+      getProductListInput: (search?: string ) => Promise<[]>
     }
   }
 }
@@ -28,4 +30,6 @@ export const api = {
   addProduct: (product: Product): Promise<void> => window.api.addProduct(product),
   updatedProduct: (product: Product): Promise<void> => window.api.updatedProduct(product),
   deleteProduct: (id: number): Promise<void> => window.api.deleteProduct(id),
+  getProductById: (id: number): Promise<Product | undefined> => window.api.getProductById(id),
+  getProductListInput: (search?: string): Promise<[]> => window.api.getProductListInput(search),
 }
