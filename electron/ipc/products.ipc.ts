@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { ProductRepo } from '../db/repositories/product.repo'
+import { OperationRepo } from '../db/repositories/operation.repo'
 
 ipcMain.handle('products:list', (_e, params) => {
   const items = ProductRepo.getList(params)
@@ -32,3 +33,19 @@ ipcMain.handle('products:getById', (_, id) => {
 ipcMain.handle('products:getListInput', (_, params) => {
   return ProductRepo.getListInput(params)
 }) 
+
+ipcMain.handle('operation:add', (_, operation) => {
+  try {
+    const operationId = OperationRepo.create(operation)
+
+    return {
+      success: true,
+      id: Number(operationId)
+    }
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e.message
+    }
+  }
+})

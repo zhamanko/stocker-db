@@ -128,6 +128,52 @@ const ProductRepo = {
     return db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
   }
 };
+const OperationRepo = {
+  create(operation) {
+    const trx = db.transaction(() => {
+      const result = db.prepare(`
+        INSERT INTO operations (type, date, comment)
+        VALUES (?, ?, ?)
+      `).run(
+        operation.type,
+        operation.date ?? (/* @__PURE__ */ new Date()).toISOString(),
+        operation.comment ?? null
+      );
+      const operationId = result.lastInsertRowid;
+      for (const item of operation.items) {
+        if (operation.type === "out") {
+          const product = db.prepare(`
+            SELECT quantity FROM products WHERE id = ?
+          `).get(item.product_id);
+          if (!product) {
+            throw new Error("Товар не знайдено");
+          }
+          if (product.quantity < item.quantity) {
+            throw new Error("Недостатньо товару на складі");
+          }
+        }
+        db.prepare(`
+          INSERT INTO operation_items
+          (operation_id, product_id, quantity, price)
+          VALUES (?, ?, ?, ?)
+        `).run(
+          operationId,
+          item.product_id,
+          item.quantity,
+          item.price
+        );
+        const delta = operation.type === "in" ? item.quantity : -item.quantity;
+        db.prepare(`
+          UPDATE products
+          SET quantity = quantity + ?
+          WHERE id = ?
+        `).run(delta, item.product_id);
+      }
+      return operationId;
+    });
+    return trx();
+  }
+};
 ipcMain.handle("products:list", (_e, params) => {
   const items = ProductRepo.getList(params);
   const total = ProductRepo.count(params.search || "");
@@ -153,6 +199,20 @@ ipcMain.handle("products:getById", (_, id) => {
 });
 ipcMain.handle("products:getListInput", (_, params) => {
   return ProductRepo.getListInput(params);
+});
+ipcMain.handle("operation:add", (_, operation) => {
+  try {
+    const operationId = OperationRepo.create(operation);
+    return {
+      success: true,
+      id: Number(operationId)
+    };
+  } catch (e) {
+    return {
+      success: false,
+      message: e.message
+    };
+  }
 });
 const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");

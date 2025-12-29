@@ -1,5 +1,6 @@
 import { api, Product } from './../api/api'
 
+
 export async function fetchProducts( page: number, search: string) {
   const limit = 50
   const offset = (page - 1) * limit

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { watch, ref } from 'vue';
+import { createOperation } from '../service/operation.service';
+import { ProductCheck } from '../api/api'
 import SearchInput from '../components/SearchInput.vue';
 
 export type Item = {
@@ -8,6 +10,27 @@ export type Item = {
   quantity: number;
   price: number;
 }
+
+async function addOperation() {
+  const payload: ProductCheck = {
+    type: typeOperation.value,
+    date: date.value,
+    comment: '',
+    items: items.value.map(i => ({
+      product_id: i.productId!,
+      quantity: i.quantity,
+      price: i.price
+    }))
+  }
+
+  try {
+    const id = await createOperation(payload)
+    alert('Операція збережена, ID: ' + id)
+  } catch (e: any) {
+    alert(e.message)
+  }
+}
+
 
 const date = ref('');
 const totalPrice = ref(0);
@@ -21,7 +44,7 @@ function curronDate() {
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = today.getFullYear();
-  date.value = `${year}-${month}-${day}`; 
+  date.value = `${year}-${month}-${day}`;
 }
 curronDate();
 
@@ -79,6 +102,8 @@ watch(items, (newItems) => {
     <span>Загальна сума: {{ totalPrice }}</span>
 
     <button @click="addItem" class="bg-blue-500 text-white px-2 py-1 rounded">Додати позицію</button>
-    <button class="bg-green-500 text-white px-2 py-1 rounded">Зберегти операцію</button>
+    <button @click="addOperation" class="bg-green-500 text-white px-4 py-2 rounded">
+      Зберегти операцію
+    </button>
   </div>
 </template>
