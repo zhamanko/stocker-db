@@ -49,3 +49,11 @@ ipcMain.handle('operation:add', (_, operation) => {
     }
   }
 })
+
+ipcMain.handle('operations:list', (_e, params) => {
+  return OperationRepo.getList(params);
+});
+
+ipcMain.handle('operations:getItems', (_e, operationId) => {
+  return OperationRepo.getItems(operationId);
+});

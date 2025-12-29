@@ -68,11 +68,12 @@ declare global {
         from?: string;
         to?: string;
         productId?: number;
-        limit: number;
-        offset: number;
+        type?: "in" | "out";
+        search?: string;
+        limit?: number;
+        offset?: number;
       }) => Promise<OperationListResponse>;
 
-      /** 🔽 ПОЗИЦІЇ ОДНОГО ЧЕКУ */
       getOperationItems: (operationId: number) => Promise<OperationItemView[]>;
     };
   }
@@ -97,4 +98,17 @@ export const api = {
     operation: ProductCheck
   ): Promise<{ success: boolean; id?: number; message?: string }> =>
     window.api.addOperation(operation),
+
+  getOperations: (params: {
+    from?: string;
+    to?: string;
+    productId?: number;
+    type?: "in" | "out";
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<OperationListResponse> => window.api.getOperations(params),
+
+  getOperationItems: (operationId: number): Promise<OperationItemView[]> =>
+    window.api.getOperationItems(operationId),
 };

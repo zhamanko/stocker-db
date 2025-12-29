@@ -16,4 +16,17 @@ contextBridge.exposeInMainWorld("api", {
     date: string;
     comment?: string;
   }) => ipcRenderer.invoke("operation:add", operation),
+
+  getOperations: (params: {
+    from?: string;
+    to?: string;
+    productId?: number;
+    type?: 'in' | 'out';
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) => ipcRenderer.invoke("operations:list", params),
+
+  getOperationItems: (operationId: number) =>
+    ipcRenderer.invoke("operations:getItems", operationId),
 });

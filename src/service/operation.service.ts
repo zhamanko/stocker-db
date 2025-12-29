@@ -10,4 +10,3 @@ export async function createOperation(operation: ProductCheck) {
 
   return res.id
 }
-

@@ -172,6 +172,68 @@ const OperationRepo = {
       return operationId;
     });
     return trx();
+  },
+  getList(params) {
+    const { limit = 30, offset = 0, type, from, to, search } = params;
+    let query = `
+      SELECT o.id, o.type, o.date, o.comment,
+        COALESCE(SUM(oi.quantity * oi.price), 0) as total
+      FROM operations o
+      LEFT JOIN operation_items oi ON o.id = oi.operation_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE 1=1
+    `;
+    const args = [];
+    if (type) {
+      query += ` AND o.type = ?`;
+      args.push(type);
+    }
+    if (from) {
+      query += ` AND DATE(o.date) >= DATE(?)`;
+      args.push(from);
+    }
+    if (to) {
+      query += ` AND DATE(o.date) <= DATE(?)`;
+      args.push(to);
+    }
+    if (search) {
+      query += ` AND (p.code LIKE ? OR p.name LIKE ?)`;
+      args.push(`%${search}%`, `%${search}%`);
+    }
+    query += `
+      GROUP BY o.id
+      ORDER BY o.date DESC
+      LIMIT ? OFFSET ?
+    `;
+    args.push(limit, offset);
+    const items = db.prepare(query).all(...args);
+    const totalQuery = `
+      SELECT COUNT(DISTINCT o.id) as count
+      FROM operations o
+      LEFT JOIN operation_items oi ON o.id = oi.operation_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE 1=1
+      ${type ? " AND o.type = ?" : ""}
+      ${from ? " AND DATE(o.date) >= DATE(?)" : ""}
+      ${to ? " AND DATE(o.date) <= DATE(?)" : ""}
+      ${search ? " AND (p.code LIKE ? OR p.name LIKE ?)" : ""}
+    `;
+    const totalArgs = [];
+    if (type) totalArgs.push(type);
+    if (from) totalArgs.push(from);
+    if (to) totalArgs.push(to);
+    if (search) totalArgs.push(`%${search}%`, `%${search}%`);
+    const { count: total = 0 } = db.prepare(totalQuery).get(...totalArgs) || {};
+    return { items, total };
+  },
+  getItems(operationId) {
+    return db.prepare(`
+      SELECT oi.id, p.code as product_code, p.name as product_name,
+             oi.quantity, oi.price, (oi.quantity * oi.price) as total
+      FROM operation_items oi
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE oi.operation_id = ?
+    `).all(operationId);
   }
 };
 ipcMain.handle("products:list", (_e, params) => {
@@ -213,6 +275,12 @@ ipcMain.handle("operation:add", (_, operation) => {
       message: e.message
     };
   }
+});
+ipcMain.handle("operations:list", (_e, params) => {
+  return OperationRepo.getList(params);
+});
+ipcMain.handle("operations:getItems", (_e, operationId) => {
+  return OperationRepo.getItems(operationId);
 });
 const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");

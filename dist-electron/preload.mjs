@@ -7,5 +7,7 @@ electron.contextBridge.exposeInMainWorld("api", {
   deleteProduct: (id) => electron.ipcRenderer.invoke("products:delete", id),
   getProductById: (id) => electron.ipcRenderer.invoke("products:getById", id),
   getProductListInput: (search) => electron.ipcRenderer.invoke("products:getListInput", search),
-  addOperation: (operation) => electron.ipcRenderer.invoke("operation:add", operation)
+  addOperation: (operation) => electron.ipcRenderer.invoke("operation:add", operation),
+  getOperations: (params) => electron.ipcRenderer.invoke("operations:list", params),
+  getOperationItems: (operationId) => electron.ipcRenderer.invoke("operations:getItems", operationId)
 });
