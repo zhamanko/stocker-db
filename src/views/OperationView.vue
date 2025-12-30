@@ -7,6 +7,7 @@ import SearchInput from '../components/SearchInput.vue';
 export type Item = {
   product: string;
   productId?: number;
+  comment?: string;
   quantity: number;
   price: number;
 }
@@ -15,7 +16,7 @@ async function addOperation() {
   const payload: ProductCheck = {
     type: typeOperation.value,
     date: date.value,
-    comment: '',
+    comment: comment.value,
     items: items.value.map(i => ({
       product_id: i.productId!,
       quantity: i.quantity,
@@ -25,7 +26,8 @@ async function addOperation() {
 
   try {
     const id = await createOperation(payload)
-    alert('Операція збережена, ID: ' + id)
+    console.log(id)
+    alert('Операція збережена')
   } catch (e: any) {
     alert(e.message)
   }
@@ -33,6 +35,7 @@ async function addOperation() {
 
 
 const date = ref('');
+const comment = ref('');
 const totalPrice = ref(0);
 const typeOperation = ref<'in' | 'out'>('out');
 const items = ref<Item[]>([
@@ -64,46 +67,67 @@ watch(items, (newItems) => {
 
 <template>
   <div class="space-y-4 space-x-4">
-    <select v-model="typeOperation">
-      <option value="out">Продаж</option>
-      <option value="in">Прихід</option>
-    </select>
-    <input type="date" v-model="date" class="border border-gray-400">
-    <input type="text" class="border border-gray-400" placeholder="Коментар">
 
-    <table class="border-collapse border border-gray-400 w-full">
-      <thead>
-        <tr>
-          <th class="border border-gray-400">Товар</th>
-          <th class="border border-gray-400">Кількість</th>
-          <th class="border border-gray-400">Ціна</th>
-          <th class="border border-gray-400">Сума</th>
-          <th class="border border-gray-400">Дії</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, index) in items" :key="index">
-          <td>
-            <SearchInput @select="(product) => {
-              item.product = `${product.code} — ${product.name}`;
-              item.productId = product.id
-            }" />
-          </td>
-          <td><input type="number" v-model.number="item.quantity" class="border border-gray-400"></td>
-          <td><input type="number" v-model.number="item.price" class="border border-gray-400"></td>
-          <td class="border border-gray-400">{{ item.quantity * item.price }}</td>
-          <td>
-            <button @click="removeItem(index)" class="text-red-500">❌</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <h1 class="font-bold text-2xl">Операція</h1>
 
-    <span>Загальна сума: {{ totalPrice }}</span>
+    <div class="flex gap-4">
+      <select v-model="typeOperation" class="w-60 border border-gray-400 rounded p-1 hover:border-gray-500 transition">
+        <option value="out">Продаж</option>
+        <option value="in">Прихід</option>
+      </select>
+      <input type="date" v-model="date"
+        class="w-60 border border-gray-400 rounded p-1 hover:border-gray-500 transition">
+      <input type="text" v-model="comment"
+        class="w-1/4 border border-gray-400 rounded p-1 hover:border-gray-500 transition" placeholder="Коментар">
+    </div>
 
-    <button @click="addItem" class="bg-blue-500 text-white px-2 py-1 rounded">Додати позицію</button>
-    <button @click="addOperation" class="bg-green-500 text-white px-4 py-2 rounded">
-      Зберегти операцію
-    </button>
+    <div class="flex flex-col gap-2">
+      <table class="border-collapse w-full">
+        <thead>
+          <tr class="bg-gray-300">
+            <th class="p-2 rounded-tl-2xl">Товар</th>
+            <th class="border-x border-gray-400 p-2">Кількість</th>
+            <th class="border-x border-gray-400 p-2">Ціна за один.</th>
+            <th class="border-x border-gray-400 p-2">Сума</th>
+            <th class="rounded-tr-2xl"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, index) in items" :key="index">
+            <td class="border-b border-gray-400">
+              <SearchInput @select="(product) => {
+                item.product = `${product.code} — ${product.name}`;
+                item.productId = product.id
+              }" />
+            </td>
+            <td class="border-x border-b border-gray-400 w-40"><input type="number" v-model.number="item.quantity"
+                class="w-full p-1"></td>
+            <td class="border-x border-b border-gray-400 w-40"><input type="number" v-model.number="item.price"
+                class="w-full p-1"></td>
+            <td class="border-x border-b border-gray-400 p-2">{{ item.quantity * item.price }} $</td>
+            <td class="border-b border-gray-400 text-center p-2 w-15">
+              <div class="flex justify-center items-center" v-if="items.length !== 1">
+                <button @click="removeItem(index)" class="hover:scale-130 transition cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke-width="2" stroke="currentColor" class="size-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button @click="addItem" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition">Додати
+        позицію</button>
+    </div>
+
+
+    <div class="flex flex-col justify-end items-end gap-2">
+      <span><strong>Загальна сума:</strong> {{ totalPrice }} $</span>
+      <button @click="addOperation" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
+        Зберегти операцію
+      </button>
+    </div>
   </div>
 </template>

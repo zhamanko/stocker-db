@@ -74,7 +74,7 @@ const ProductRepo = {
   getListInput(search) {
     const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search LIMIT 10` : "";
     return db.prepare(
-      `SELECT * FROM products
+      `SELECT id, code, name, quantity FROM products
         ${where}`
     ).all({
       search: `%${search}%`
@@ -181,7 +181,7 @@ const OperationRepo = {
       FROM operations o
       LEFT JOIN operation_items oi ON o.id = oi.operation_id
       LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1
+      WHERE 1=1 
     `;
     const args = [];
     if (type) {
@@ -203,7 +203,7 @@ const OperationRepo = {
     query += `
       GROUP BY o.id
       ORDER BY o.date DESC
-      LIMIT ? OFFSET ?
+      LIMIT ? OFFSET ? 
     `;
     args.push(limit, offset);
     const items = db.prepare(query).all(...args);

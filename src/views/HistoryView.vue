@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { api, OperationRow, OperationItemView } from "../api/api";
 
 // --- Данні ---
 const operations = ref<OperationRow[]>([]);
 const operationItemsMap = ref<Record<number, OperationItemView[]>>({});
 const total = ref(0);
+const currentPage = computed(() => {
+    return Math.floor(offset.value / limit) + 1;
+});
+
+// всього сторінок
+const totalPages = computed(() => {
+    return Math.ceil(total.value / limit);
+});
 
 // --- Фільтри ---
 const typeFilter = ref<"in" | "out" | "">("");
@@ -14,7 +22,7 @@ const dateFrom = ref<string>("");
 const dateTo = ref<string>("");
 
 // --- Пагінація ---
-const limit = 30;
+const limit = 20;
 const offset = ref(0);
 
 // --- Завантаження операцій ---
@@ -61,6 +69,14 @@ function prevPage() {
     }
 }
 
+function formatDate(dateString: string | Date): string {
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Місяці в JS з 0
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+}
+
 // --- Автоматичне застосування фільтрів ---
 watch([typeFilter, searchFilter, dateFrom, dateTo], () => {
     offset.value = 0;
@@ -74,69 +90,103 @@ onMounted(loadOperations);
 
 <template>
     <div>
-        <h2>Історія операцій</h2>
+        <h1 class="font-bold text-2xl">Історія операцій</h1>
 
         <!-- Фільтри -->
-        <div style="margin-bottom: 10px;">
-            <label>
-                Тип:
-                <select v-model="typeFilter">
+        <div class="p-4 flex gap-4 justify-center items-center flex-wrap">
+            <div class="space-x-2 flex flex-col">
+                <label>Тип:</label>
+                <select v-model="typeFilter" class="w-30 border border-gray-400  rounded p-1">
                     <option value="">Всі</option>
                     <option value="in">Прихід</option>
                     <option value="out">Продаж</option>
                 </select>
-            </label>
+            </div>
 
-            <label>
-                Дата від:
-                <input type="date" v-model="dateFrom" />
-            </label>
+            <div class="space-x-2 flex flex-col">
+                <label>Дата від:</label>
+                <input type="date" v-model="dateFrom" class="w-60 border border-gray-400  rounded p-1" />
+            </div>
 
-            <label>
-                Дата до:
-                <input type="date" v-model="dateTo" />
-            </label>
+            <div class="space-x-2 flex flex-col">
+                <label>Дата до:</label>
+                <input type="date" v-model="dateTo" class="w-60 border border-gray-400 rounded p-1" />
+            </div>
 
-            <label>
-                Пошук (код або назва):
-                <input type="text" v-model="searchFilter" />
-            </label>
+            <div class="space-x-2 flex flex-col">
+                <label>Пошук:</label>
+                <input type="text" v-model="searchFilter" placeholder="(код або назва)" class="w-60 border border-gray-400  rounded p-1" />
+            </div>
 
-            <button @click="resetFilters">Скинути</button>
+            <button @click="resetFilters" class="bg-blue-500 text-white px-4 py-2 rounded-2xl">Скинути</button>
         </div>
 
-        <div v-for="op in operations" :key="op.id">
-            <h2>{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
-            <span>{{ op.date }}</span>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Код</th>
-                        <th>Назва</th>
-                        <th>Кількість</th>
-                        <th>Ціна</th>
-                        <th>Сума</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in operationItemsMap[op.id]" :key="item.id">
-                        <td>{{ item.product_code }}</td>
-                        <td>{{ item.product_name }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>{{ item.price }}</td>
-                        <td>{{ item.total }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p>Коментар: {{ op.comment || '-' }}</p>
-            <p>Сума: {{ op.total }}</p>
+        <div class="flex justify-center gap-2 mb-4" :class="totalPages <= 1 ? 'hidden' : ''">
+            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+
+            </button>
+            <span>{{ currentPage }} з {{ totalPages }}</span>
+            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+
+            </button>
         </div>
 
-        <!-- Пагінація -->
-        <div style="margin-top: 10px;">
-            <button @click="prevPage" :disabled="offset === 0">Попередня</button>
-            <button @click="nextPage" :disabled="offset + limit >= total">Наступна</button>
-            <span>Всього: {{ total }}</span>
+        <div class="flex flex-col gap-4">
+            <div v-for="op in operations" :key="op.id" class="p-4 rounded-2xl space-y-4"
+                :class="op.type === 'in' ? 'bg-green-100' : 'bg-blue-100'">
+                <div class="flex justify-between">
+                    <h2 class="font-bold text-lg">{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
+                    <span>{{ formatDate(op.date) }}</span>
+                </div>
+                <table class="w-full">
+                    <thead>
+                        <tr :class="op.type === 'in' ? 'bg-green-300' : 'bg-blue-300'">
+                            <th class="rounded-tl-xl py-2">Код товару</th>
+                            <th class="py-2 border-x">Назва</th>
+                            <th class="py-2">Кількість</th>
+                            <th class="py-2 border-x">Ціна за один.</th>
+                            <th class="rounded-tr-xl">Сума</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in operationItemsMap[op.id]" :key="item.id" class="text-center"
+                            :class="op.type === 'in' ? 'bg-green-200' : 'bg-blue-200'">
+                            <td class="py-2">{{ item.product_code }}</td>
+                            <td class="border-x">{{ item.product_name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td class="border-x">{{ item.price }}</td>
+                            <td>{{ item.total }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="flex justify-between ">
+                    <p><strong>Коментар:</strong> {{ op.comment || '-' }}</p>
+                    <p><strong>Сума: </strong> {{ op.total }}</p>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="flex justify-center gap-2 mt-4" :class="totalPages <= 1 ? 'hidden' : ''">
+            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+
+            </button>
+            <span>{{ currentPage }} з {{ totalPages }}</span>
+            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+
+            </button>
         </div>
     </div>
 </template>

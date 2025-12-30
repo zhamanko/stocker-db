@@ -104,47 +104,160 @@ loadProducts()
 </script>
 
 <template>
-    <input v-model="search" @input="onSearchInput(search)" placeholder="Пошук..." />
-        <button @click="openModal = true">Додати товар</button>
+    <h1 class="font-bold text-2xl">Товари</h1>
+    <div class="flex justify-between my-6">
+        <input v-model="search" @input="onSearchInput(search)" class="border border-gray-400 w-1/4 p-1 rounded hover:border-gray-500 transition"
+            placeholder="Пошук..." />
+        <button @click="openModal = true" class="bg-blue-500 px-4 py-3 rounded text-white hover:bg-blue-600 transition">Додати товар</button>
+    </div>
 
-    <table>
+    <table class="w-full">
         <thead>
-            <tr>
-                <th @click="sort('id')">№</th>
-                <th @click="sort('code')">Код</th>
-                <th @click="sort('name')">Назва</th>
-                <th @click="sort('category')">Категорія</th>
-                <th @click="sort('quantity')">Кількість</th>
-                <th @click="sort('price')">Ціна</th>
-                <th></th>
+            <tr class="bg-gray-300">
+                <th @click="sort('id')" class="rounded-tl-xl cursor-pointer py-2 w-20 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>№</span>
+                        <span v-if="sortKey === 'id'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+                </th>
+                <th @click="sort('code')" class="cursor-pointer py-2 border-x border-gray-400 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>Код товару</span>
+                        <span v-if="sortKey === 'code'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+                </th>
+                <th @click="sort('name')" class="cursor-pointer max-w-120 py-2 border-x border-gray-400 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>Назва</span>
+                        <span v-if="sortKey === 'name'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+                </th>
+                <th @click="sort('category')" class="cursor-pointer py-2 border-x border-gray-400 w-60 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>Категорія</span>
+                        <span v-if="sortKey === 'category'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+                </th>
+                <th @click="sort('quantity')" class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>Кількість</span>
+                        <span v-if="sortKey === 'quantity'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+
+                </th>
+                <th @click="sort('price')" class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
+                    <div class="flex justify-center items-center">
+                        <span>Ціна за один.</span>
+                        <span v-if="sortKey === 'price'">
+                            <svg v-if="sortDir === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 15l7-7 7 7" />
+                            </svg>
+
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </span>
+                    </div>
+
+                </th>
+                <th class="rounded-tr-xl"></th>
             </tr>
         </thead>
         <tbody>
-            <tr v-for="product in sortedProducts" :key="product.id">
-                <td>{{ product.id }}</td>
-                <td>{{ product.code }}</td>
-                <td>{{ product.name }}</td>
-                <td>{{ product.category }}</td>
-                <td>{{ product.quantity }}</td>
-                <td>{{ product.price }}</td>
-                <td><div class="space-x-2">
-                    <button @click="selectedProduct = product; openModal = true">Редагувати</button>
-                    <button @click="product.id !== undefined && deleteProducte(product.id)">Видалити</button>
-                </div></td>
+            <tr v-for="product in sortedProducts" :key="product.id" class="text-center ">
+                <td class="p-2 border-b border-gray-400">{{ product.id }}</td>
+                <td class="p-2 border-x border-b border-gray-400">{{ product.code }}</td>
+                <td class="p-2 border-x border-b border-gray-400 max-w-120">{{ product.name }}</td>
+                <td class="p-2 border-x border-b border-gray-400">{{ product.category }}</td>
+                <td class="p-2 border-x border-b border-gray-400">{{ product.quantity }}</td>
+                <td class="p-2 border-x border-b border-gray-400">{{ product.price }}</td>
+                <td class="p-2 w-70 border-b border-gray-400">
+                    <div class="space-x-2 text-white">
+                        <button @click="selectedProduct = product; openModal = true"
+                            class="bg-blue-500 px-4 py-1 rounded hover:bg-blue-600 transition">Редагувати</button>
+                        <button @click="product.id !== undefined && deleteProducte(product.id)"
+                            class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition">Видалити</button>
+                    </div>
+                </td>
             </tr>
         </tbody>
     </table>
 
     <div v-if="totalPages > 1">
         <button :disabled="page === 1" @click="loadProducts(page - 1)">
-        ←
-    </button>
-    <span>Сторінка {{ page }} з {{ totalPages }}</span>
-    <button :disabled="page * 50 >= total" @click="loadProducts(page + 1)">
-        →
-    </button>
+            ←
+        </button>
+        <span>Сторінка {{ page }} з {{ totalPages }}</span>
+        <button :disabled="page * 50 >= total" @click="loadProducts(page + 1)">
+            →
+        </button>
     </div>
 
-    <ProductForm v-if="openModal" @close="openModal = false; selectedProduct = null" :item="selectedProduct" @save="save"/>
+    <ProductForm v-if="openModal" @close="openModal = false; selectedProduct = null" :item="selectedProduct"
+        @save="save" />
 
 </template>

@@ -24,7 +24,7 @@ export const ProductRepo = {
 
     return db
       .prepare(
-        `SELECT * FROM products
+        `SELECT id, code, name, quantity FROM products
         ${where}`
       )
       .all({

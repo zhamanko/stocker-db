@@ -6,6 +6,7 @@ export type Product = {
   id: number;
   code: string;
   name: string;
+  quantity: number;
 }
 
 const emit = defineEmits<{
@@ -23,7 +24,7 @@ watch(searchInput, async (val) => {
 });
 
 function selectProduct(product: Product) {
-  searchInput.value = `${product.code} — ${product.name}`; 
+  searchInput.value = `${product.code} — ${product.name} | ${product.quantity}`; 
   emit('select', product); 
 }
 </script>
@@ -33,7 +34,7 @@ function selectProduct(product: Product) {
     <input
       type="text"
       v-model="searchInput"
-      class="border border-gray-400 w-full px-2 py-1"
+      class=" w-full px-2 py-1"
       placeholder="Пошук товару..."
     />
     <ul
@@ -46,7 +47,7 @@ function selectProduct(product: Product) {
         class="p-1 hover:bg-gray-200 cursor-pointer"
         @click="selectProduct(product)"
       >
-        {{ product.code }} — {{ product.name }}
+        {{ product.code }} — {{ product.name }} | {{ product.quantity }}
       </li>
     </ul>
   </div>

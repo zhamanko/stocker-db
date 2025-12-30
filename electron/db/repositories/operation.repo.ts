@@ -113,7 +113,7 @@ export const OperationRepo = {
       FROM operations o
       LEFT JOIN operation_items oi ON o.id = oi.operation_id
       LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1
+      WHERE 1=1 
     `;
 
     const args: any[] = [];
@@ -141,7 +141,7 @@ export const OperationRepo = {
     query += `
       GROUP BY o.id
       ORDER BY o.date DESC
-      LIMIT ? OFFSET ?
+      LIMIT ? OFFSET ? 
     `;
 
     args.push(limit, offset);
