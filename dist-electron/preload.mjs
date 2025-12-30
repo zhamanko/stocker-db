@@ -1,1 +1,13 @@
-"use strict";const t=require("electron");t.contextBridge.exposeInMainWorld("api",{getProducts:e=>t.ipcRenderer.invoke("products:list",e),addProduct:e=>t.ipcRenderer.invoke("products:add",e),updatedProduct:e=>t.ipcRenderer.invoke("products:update",e),deleteProduct:e=>t.ipcRenderer.invoke("products:delete",e),getProductById:e=>t.ipcRenderer.invoke("products:getById",e),getProductListInput:e=>t.ipcRenderer.invoke("products:getListInput",e),addOperation:e=>t.ipcRenderer.invoke("operation:add",e),getOperations:e=>t.ipcRenderer.invoke("operations:list",e),getOperationItems:e=>t.ipcRenderer.invoke("operations:getItems",e)});
+"use strict";
+const electron = require("electron");
+electron.contextBridge.exposeInMainWorld("api", {
+  getProducts: (params) => electron.ipcRenderer.invoke("products:list", params),
+  addProduct: (product) => electron.ipcRenderer.invoke("products:add", product),
+  updatedProduct: (product) => electron.ipcRenderer.invoke("products:update", product),
+  deleteProduct: (id) => electron.ipcRenderer.invoke("products:delete", id),
+  getProductById: (id) => electron.ipcRenderer.invoke("products:getById", id),
+  getProductListInput: (search) => electron.ipcRenderer.invoke("products:getListInput", search),
+  addOperation: (operation) => electron.ipcRenderer.invoke("operation:add", operation),
+  getOperations: (params) => electron.ipcRenderer.invoke("operations:list", params),
+  getOperationItems: (operationId) => electron.ipcRenderer.invoke("operations:getItems", operationId)
+});

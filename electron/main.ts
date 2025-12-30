@@ -37,7 +37,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
-
+ win.maximize();
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
