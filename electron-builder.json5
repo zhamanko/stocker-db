@@ -1,9 +1,10 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
+  "appId": "com.zhaman.stocker",
   "asar": true,
-  "productName": "YourAppName",
+  "productName": "Stocker-dock",
+  "icon": "public/logo",
   "directories": {
     "output": "release/${version}"
   },
@@ -12,12 +13,14 @@
     "dist-electron"
   ],
   "mac": {
+    "icon": "public/logo.icns",
     "target": [
       "dmg"
     ],
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
+    "icon": "public/logo.ico",
     "target": [
       {
         "target": "nsis",
