@@ -14,7 +14,7 @@ export function createTables(db: Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
-        category TEXT,
+        category TEXT NOT NULL,
         quantity INTEGER DEFAULT 0,
         price REAL DEFAULT 0
       );
@@ -45,7 +45,9 @@ export function createTables(db: Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
         operation_id INTEGER NOT NULL, 
-        product_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
 
         quantity INTEGER NOT NULL,
         price REAL NOT NULL

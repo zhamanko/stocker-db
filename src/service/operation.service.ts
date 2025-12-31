@@ -10,3 +10,16 @@ export async function createOperation(operation: ProductCheck) {
 
   return res.id
 }
+
+export async function getOperations(params:any) {
+  return await api.getOperations(params);
+}
+
+export async function getOperationItems(params: any) {
+  return await api.getOperationItems(params);
+}
+
+export async function deleteOperation(params: number) {
+  return await api.deleteOperation(params);
+  
+}

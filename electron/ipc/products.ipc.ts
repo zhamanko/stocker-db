@@ -57,3 +57,7 @@ ipcMain.handle('operations:list', (_e, params) => {
 ipcMain.handle('operations:getItems', (_e, operationId) => {
   return OperationRepo.getItems(operationId);
 });
+
+ipcMain.handle('operations:delete', (_e, operationId) => {
+  return OperationRepo.deleteOperation(operationId);
+})

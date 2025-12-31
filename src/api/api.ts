@@ -37,6 +37,7 @@ export type OperationItemView = {
   id: number;
   product_code: string;
   product_name: string;
+  product_category: string;
   quantity: number;
   price: number;
   total: number;
@@ -75,6 +76,7 @@ declare global {
       }) => Promise<OperationListResponse>;
 
       getOperationItems: (operationId: number) => Promise<OperationItemView[]>;
+      deleteOperation: (operationId: number) => Promise<void>;
     };
   }
 }
@@ -111,4 +113,5 @@ export const api = {
 
   getOperationItems: (operationId: number): Promise<OperationItemView[]> =>
     window.api.getOperationItems(operationId),
+  deleteOperation: (id: number): Promise<void> => window.api.deleteOperation(id),
 };

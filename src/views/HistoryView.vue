@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { api, OperationRow, OperationItemView } from "../api/api";
+import { OperationRow, OperationItemView } from "../api/api";
+import { getOperationItems, getOperations, deleteOperation } from '../service/operation.service'
 
 // --- Данні ---
 const operations = ref<OperationRow[]>([]);
@@ -27,7 +28,7 @@ const offset = ref(0);
 
 // --- Завантаження операцій ---
 async function loadOperations() {
-    const res = await api.getOperations({
+    const res = await getOperations({
         limit,
         offset: offset.value,
         type: typeFilter.value || undefined,
@@ -40,9 +41,22 @@ async function loadOperations() {
 
     // Завантаження позицій для всіх операцій
     for (const op of operations.value) {
-        const items = await api.getOperationItems(op.id);
+        const items = await getOperationItems(op.id);
         operationItemsMap.value[op.id] = items;
     }
+}
+
+async function removeOperation(id: number) {
+  if (!confirm("Впевнені, що потрібно видалити операцію?")) return;
+
+  try {
+    await deleteOperation(id); // викликаємо метод сервісу, який видаляє операцію
+    // оновлюємо список після видалення
+    await loadOperations();
+    alert("Операція видалена");
+  } catch (e: any) {
+    alert(e.message);
+  }
 }
 
 // --- Скидання фільтрів ---
@@ -137,18 +151,21 @@ onMounted(loadOperations);
             </button>
         </div>
 
-        <div class="flex flex-col gap-4">
+        <div v-if="operations.length" class="flex flex-col gap-4">
             <div v-for="op in operations" :key="op.id" class="p-4 rounded-2xl space-y-4"
                 :class="op.type === 'in' ? 'bg-green-100' : 'bg-blue-100'">
                 <div class="flex justify-between">
                     <h2 class="font-bold text-lg">{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
                     <span>{{ formatDate(op.date) }}</span>
+                    <button @click="removeOperation(op.id)"
+                    class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
                 </div>
                 <table class="w-full">
                     <thead>
                         <tr :class="op.type === 'in' ? 'bg-green-300' : 'bg-blue-300'">
                             <th class="rounded-tl-xl py-2">Код товару</th>
                             <th class="py-2 border-x">Назва</th>
+                            <th class="py-2 border-x">Категорія</th>
                             <th class="py-2">Кількість</th>
                             <th class="py-2 border-x">Ціна за один.</th>
                             <th class="rounded-tr-xl">Сума</th>
@@ -157,20 +174,25 @@ onMounted(loadOperations);
                     <tbody>
                         <tr v-for="item in operationItemsMap[op.id]" :key="item.id" class="text-center"
                             :class="op.type === 'in' ? 'bg-green-200' : 'bg-blue-200'">
-                            <td class="py-2">{{ item.product_code }}</td>
-                            <td class="border-x">{{ item.product_name }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td class="border-x">{{ item.price }}</td>
-                            <td>{{ item.total }}</td>
+                            <td class="py-2 w-70">{{ item.product_code }}</td>
+                            <td class="py-2 border-x">{{ item.product_name }}</td>
+                            <td class="py-2 border-x w-70">{{ item.product_category }}</td>
+                            <td class="py-2 w-40">{{ item.quantity }}</td>
+                            <td class="py-2 border-x w-40">{{ item.price }}</td>
+                            <td class="py-2">{{ item.total}} $</td>
                         </tr>
                     </tbody>
                 </table>
                 <div class="flex justify-between ">
                     <p><strong>Коментар:</strong> {{ op.comment || '-' }}</p>
-                    <p><strong>Сума: </strong> {{ op.total }}</p>
+                    <p><strong>Сума: </strong> {{ op.total }} $</p>
                 </div>
             </div>
         </div>
+
+    <div v-else>
+        <p class="text-center text-lg">Нічого не знайдено</p>
+    </div>
 
 
         <div class="flex justify-center gap-2 mt-4" :class="totalPages <= 1 ? 'hidden' : ''">

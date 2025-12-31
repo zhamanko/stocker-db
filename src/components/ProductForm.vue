@@ -17,7 +17,7 @@ const isValid = computed(() => {
     form.code.trim() !== '' &&
     form.name.trim() !== '' &&
     form.category.trim() !== '' &&
-    form.quantity > 0 &&
+    form.quantity >= 0 &&
     form.price >= 0
   )
 })

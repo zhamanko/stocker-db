@@ -28,6 +28,7 @@ async function addOperation() {
     const id = await createOperation(payload)
     console.log(id)
     alert('Операція збережена')
+    resetForm()
   } catch (e: any) {
     alert(e.message)
   }
@@ -41,6 +42,15 @@ const typeOperation = ref<'in' | 'out'>('out');
 const items = ref<Item[]>([
   { product: '', quantity: 1, price: 0 }
 ]);
+
+function resetForm() {
+  typeOperation.value = 'out';
+  comment.value = '';
+  totalPrice.value = 0;
+  items.value = [{ product: '', quantity: 1, price: 0 }];
+  curronDate();
+}
+
 
 function curronDate() {
   const today = new Date();
@@ -60,7 +70,6 @@ function removeItem(index: number) {
 }
 
 watch(items, (newItems) => {
-  console.log(newItems)
   totalPrice.value = newItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
 }, { deep: true });
 </script>
@@ -95,10 +104,10 @@ watch(items, (newItems) => {
         <tbody>
           <tr v-for="(item, index) in items" :key="index">
             <td class="border-b border-gray-400">
-              <SearchInput @select="(product) => {
-                item.product = `${product.code} — ${product.name}`;
+              <SearchInput v-model="item.product" @select="(product) => {
                 item.productId = product.id
               }" />
+
             </td>
             <td class="border-x border-b border-gray-400 w-40"><input type="number" v-model.number="item.quantity"
                 class="w-full p-1"></td>
@@ -108,11 +117,11 @@ watch(items, (newItems) => {
             <td class="border-b border-gray-400 text-center p-2 w-15">
               <div class="flex justify-center items-center" v-if="items.length !== 1">
                 <button @click="removeItem(index)" class="hover:scale-130 transition cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                  stroke-width="2" stroke="currentColor" class="size-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </td>
           </tr>

@@ -32,14 +32,12 @@ const sortedProducts = computed(() => {
         if (aVal == null) return 1
         if (bVal == null) return -1
 
-        // числа
         if (typeof aVal === 'number' && typeof bVal === 'number') {
             return sortDir.value === 'asc'
                 ? aVal - bVal
                 : bVal - aVal
         }
 
-        // рядки
         return sortDir.value === 'asc'
             ? String(aVal).localeCompare(String(bVal))
             : String(bVal).localeCompare(String(aVal))
@@ -66,9 +64,11 @@ function save(item: Product) {
 }
 
 function deleteProducte(id: number) {
-    deleteProduct(id).then(() => {
-        loadProducts()
-    })
+    if (confirm("Впевнені, що потрібно видалити?")) {
+        deleteProduct(id).then(() => {
+            loadProducts()
+        })
+    }
 }
 
 function onSearchInput(value: string) {
@@ -78,7 +78,7 @@ function onSearchInput(value: string) {
 
     searchTimeout = window.setTimeout(() => {
         loadProducts(1, value)
-    }, 400) // ← 400 мс після завершення вводу
+    }, 400)
 }
 
 function sort(key: SortKey) {
@@ -106,12 +106,13 @@ loadProducts()
 <template>
     <h1 class="font-bold text-2xl">Товари</h1>
     <div class="flex justify-between my-6">
-        <input v-model="search" @input="onSearchInput(search)" class="border border-gray-400 w-1/4 p-1 rounded hover:border-gray-500 transition"
-            placeholder="Пошук..." />
-        <button @click="openModal = true" class="bg-blue-500 px-4 py-3 rounded text-white hover:bg-blue-600 transition">Додати товар</button>
+        <input v-model="search" @input="onSearchInput(search)"
+            class="border border-gray-400 w-1/4 p-1 rounded hover:border-gray-500 transition" placeholder="Пошук..." />
+        <button @click="openModal = true"
+            class="bg-blue-500 px-4 py-3 rounded text-white hover:bg-blue-600 transition">Додати товар</button>
     </div>
 
-    <table class="w-full">
+    <table v-if="sortedProducts.length" class="w-full">
         <thead>
             <tr class="bg-gray-300">
                 <th @click="sort('id')" class="rounded-tl-xl cursor-pointer py-2 w-20 hover:bg-gray-400 transition">
@@ -132,7 +133,8 @@ loadProducts()
                         </span>
                     </div>
                 </th>
-                <th @click="sort('code')" class="cursor-pointer py-2 border-x border-gray-400 hover:bg-gray-400 transition">
+                <th @click="sort('code')"
+                    class="cursor-pointer py-2 border-x border-gray-400 hover:bg-gray-400 transition">
                     <div class="flex justify-center items-center">
                         <span>Код товару</span>
                         <span v-if="sortKey === 'code'">
@@ -150,7 +152,8 @@ loadProducts()
                         </span>
                     </div>
                 </th>
-                <th @click="sort('name')" class="cursor-pointer max-w-120 py-2 border-x border-gray-400 hover:bg-gray-400 transition">
+                <th @click="sort('name')"
+                    class="cursor-pointer max-w-120 py-2 border-x border-gray-400 hover:bg-gray-400 transition">
                     <div class="flex justify-center items-center">
                         <span>Назва</span>
                         <span v-if="sortKey === 'name'">
@@ -168,7 +171,8 @@ loadProducts()
                         </span>
                     </div>
                 </th>
-                <th @click="sort('category')" class="cursor-pointer py-2 border-x border-gray-400 w-60 hover:bg-gray-400 transition">
+                <th @click="sort('category')"
+                    class="cursor-pointer py-2 border-x border-gray-400 w-60 hover:bg-gray-400 transition">
                     <div class="flex justify-center items-center">
                         <span>Категорія</span>
                         <span v-if="sortKey === 'category'">
@@ -186,7 +190,8 @@ loadProducts()
                         </span>
                     </div>
                 </th>
-                <th @click="sort('quantity')" class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
+                <th @click="sort('quantity')"
+                    class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
                     <div class="flex justify-center items-center">
                         <span>Кількість</span>
                         <span v-if="sortKey === 'quantity'">
@@ -205,7 +210,8 @@ loadProducts()
                     </div>
 
                 </th>
-                <th @click="sort('price')" class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
+                <th @click="sort('price')"
+                    class="cursor-pointer py-2 border-x border-gray-400 w-40 hover:bg-gray-400 transition">
                     <div class="flex justify-center items-center">
                         <span>Ціна за один.</span>
                         <span v-if="sortKey === 'price'">
@@ -234,7 +240,7 @@ loadProducts()
                 <td class="p-2 border-x border-b border-gray-400 max-w-120">{{ product.name }}</td>
                 <td class="p-2 border-x border-b border-gray-400">{{ product.category }}</td>
                 <td class="p-2 border-x border-b border-gray-400">{{ product.quantity }}</td>
-                <td class="p-2 border-x border-b border-gray-400">{{ product.price }}</td>
+                <td class="p-2 border-x border-b border-gray-400">{{ product.price }} $</td>
                 <td class="p-2 w-70 border-b border-gray-400">
                     <div class="space-x-2 text-white">
                         <button @click="selectedProduct = product; openModal = true"
@@ -246,6 +252,10 @@ loadProducts()
             </tr>
         </tbody>
     </table>
+
+    <div v-else>
+        <p class="text-center text-lg">Нічого не знайдено</p>
+    </div>
 
     <div v-if="totalPages > 1">
         <button :disabled="page === 1" @click="loadProducts(page - 1)">

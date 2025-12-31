@@ -29,4 +29,6 @@ contextBridge.exposeInMainWorld("api", {
 
   getOperationItems: (operationId: number) =>
     ipcRenderer.invoke("operations:getItems", operationId),
+  deleteOperation: (operationId: number) =>
+    ipcRenderer.invoke("operations:delete", operationId)
 });

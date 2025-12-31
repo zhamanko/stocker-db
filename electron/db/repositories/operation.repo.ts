@@ -1,106 +1,116 @@
 import { db } from "./../sqlite";
 
 export type OperationRow = {
-  id: number;           // ID операції
-  type: "in" | "out";   // тип операції: прихід або продаж
-  date: string;         // дата операції
-  comment?: string;     // коментар, якщо є
-  total: number;        // загальна сума всіх позицій
+  id: number; // ID операції
+  type: "in" | "out"; // тип операції: прихід або продаж
+  date: string; // дата операції
+  comment?: string; // коментар, якщо є
+  total: number; // загальна сума всіх позицій
 };
 
 export type OperationItemView = {
-  id: number;           // ID позиції в операції (operation_items.id)
+  id: number; // ID позиції в операції (operation_items.id)
   product_code: string; // код товару
   product_name: string; // назва товару
-  quantity: number;     // кількість товару в цій позиції
-  price: number;        // ціна за одиницю
-  total: number;        // total = quantity * price
+  quantity: number; // кількість товару в цій позиції
+  price: number; // ціна за одиницю
+  total: number; // total = quantity * price
 };
 
-
 export type ProductItem = {
-    product_id: number
-    quantity: number
-    price: number
-}
+  product_id: number;
+  quantity: number;
+  price: number;
+};
 
 export type ProductCheck = {
-    type: string
-    items: ProductItem[]
-    date: string
-    comment?: string
-}
+  type: string;
+  items: ProductItem[];
+  date: string;
+  comment?: string;
+};
 
 export const OperationRepo = {
-    
-   create(operation: ProductCheck) {
+  create(operation: ProductCheck) {
     const trx = db.transaction(() => {
+      const result = db
+        .prepare(
+          `
+      INSERT INTO operations (type, date, comment)
+      VALUES (?, ?, ?)
+    `
+        )
+        .run(
+          operation.type,
+          operation.date ?? new Date().toISOString(),
+          operation.comment ?? null
+        );
 
-      // 1️⃣ створюємо операцію
-      const result = db.prepare(`
-        INSERT INTO operations (type, date, comment)
-        VALUES (?, ?, ?)
-      `).run(
-        operation.type,
-        operation.date ?? new Date().toISOString(),
-        operation.comment ?? null
-      )
+      const operationId = Number(result.lastInsertRowid);
 
-      const operationId = result.lastInsertRowid as number
-
-      // 2️⃣ позиції
       for (const item of operation.items) {
+        const product = db
+          .prepare(
+            `
+        SELECT code, name, category, quantity
+        FROM products
+        WHERE id = ?
+      `
+          )
+          .get(item.product_id) as
+          | {
+              code: string;
+              name: string;
+              category: string;
+              quantity: number;
+            }
+          | undefined;
 
-        // 🔹 перевірка залишку
-        if (operation.type === 'out') {
-          const product = db.prepare(`
-            SELECT quantity FROM products WHERE id = ?
-          `).get(item.product_id) as { quantity: number } | undefined
-
-          if (!product) {
-            throw new Error('Товар не знайдено')
-          }
-
-          if (product.quantity < item.quantity) {
-            throw new Error('Недостатньо товару на складі')
-          }
+        if (!product) {
+          throw new Error("Товар не знайдено");
         }
 
-        // 🔹 додаємо позицію
-        db.prepare(`
-          INSERT INTO operation_items
-          (operation_id, product_id, quantity, price)
-          VALUES (?, ?, ?, ?)
-        `).run(
+        if (operation.type === "out" && product.quantity < item.quantity) {
+          throw new Error("Недостатньо товару на складі");
+        }
+
+        // snapshot
+        db.prepare(
+          `
+        INSERT INTO operation_items
+        (operation_id, code, name, category, quantity, price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `
+        ).run(
           operationId,
-          item.product_id,
+          product.code,
+          product.name,
+          product.category,
           item.quantity,
           item.price
-        )
+        );
 
-        // 🔹 оновлюємо кількість товару
-        const delta =
-          operation.type === 'in'
-            ? item.quantity
-            : -item.quantity
+        const delta = operation.type === "in" ? item.quantity : -item.quantity;
 
-        db.prepare(`
-          UPDATE products
-          SET quantity = quantity + ?
-          WHERE id = ?
-        `).run(delta, item.product_id)
+        db.prepare(
+          `
+        UPDATE products
+        SET quantity = quantity + ?
+        WHERE id = ?
+      `
+        ).run(delta, item.product_id);
       }
 
-      return operationId
-    })
+      return operationId;
+    });
 
-    return trx()
+    return trx();
   },
 
   getList(params: {
     limit?: number;
     offset?: number;
-    type?: 'in' | 'out';
+    type?: "in" | "out";
     from?: string;
     to?: string;
     search?: string;
@@ -108,13 +118,16 @@ export const OperationRepo = {
     const { limit = 30, offset = 0, type, from, to, search } = params;
 
     let query = `
-      SELECT o.id, o.type, o.date, o.comment,
-        COALESCE(SUM(oi.quantity * oi.price), 0) as total
-      FROM operations o
-      LEFT JOIN operation_items oi ON o.id = oi.operation_id
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1 
-    `;
+    SELECT
+      o.id,
+      o.type,
+      o.date,
+      o.comment,
+      COALESCE(SUM(oi.quantity * oi.price), 0) AS total
+    FROM operations o
+    LEFT JOIN operation_items oi ON o.id = oi.operation_id
+    WHERE 1=1
+  `;
 
     const args: any[] = [];
 
@@ -134,51 +147,85 @@ export const OperationRepo = {
     }
 
     if (search) {
-      query += ` AND (p.code LIKE ? OR p.name LIKE ?)`;
-      args.push(`%${search}%`, `%${search}%`);
+      query += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      args.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     query += `
-      GROUP BY o.id
-      ORDER BY o.date DESC
-      LIMIT ? OFFSET ? 
-    `;
+    GROUP BY o.id
+    ORDER BY o.date DESC
+    LIMIT ? OFFSET ?
+  `;
 
     args.push(limit, offset);
 
     const items = db.prepare(query).all(...args) as OperationRow[];
 
-    const totalQuery = `
-      SELECT COUNT(DISTINCT o.id) as count
-      FROM operations o
-      LEFT JOIN operation_items oi ON o.id = oi.operation_id
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1
-      ${type ? ' AND o.type = ?' : ''}
-      ${from ? ' AND DATE(o.date) >= DATE(?)' : ''}
-      ${to ? ' AND DATE(o.date) <= DATE(?)' : ''}
-      ${search ? ' AND (p.code LIKE ? OR p.name LIKE ?)' : ''}
-    `;
+    // 🔢 total
+    let totalQuery = `
+    SELECT COUNT(DISTINCT o.id) as count
+    FROM operations o
+    LEFT JOIN operation_items oi ON o.id = oi.operation_id
+    WHERE 1=1
+  `;
 
-    const totalArgs = [];
-    if (type) totalArgs.push(type);
-    if (from) totalArgs.push(from);
-    if (to) totalArgs.push(to);
-    if (search) totalArgs.push(`%${search}%`, `%${search}%`);
+    const totalArgs: any[] = [];
 
-    const { count: total = 0 } = db.prepare(totalQuery).get(...totalArgs) as { count?: number } || {};
+    if (type) {
+      totalQuery += ` AND o.type = ?`;
+      totalArgs.push(type);
+    }
 
-    return { items, total };
+    if (from) {
+      totalQuery += ` AND DATE(o.date) >= DATE(?)`;
+      totalArgs.push(from);
+    }
+
+    if (to) {
+      totalQuery += ` AND DATE(o.date) <= DATE(?)`;
+      totalArgs.push(to);
+    }
+
+    if (search) {
+      totalQuery += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      totalArgs.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const { count = 0 } = db.prepare(totalQuery).get(...totalArgs) as {
+      count?: number;
+    };
+
+    return { items, total: count };
   },
 
   getItems(operationId: number) {
-    return db.prepare(`
-      SELECT oi.id, p.code as product_code, p.name as product_name,
-             oi.quantity, oi.price, (oi.quantity * oi.price) as total
-      FROM operation_items oi
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE oi.operation_id = ?
-    `).all(operationId) as OperationItemView[];
-  }
+    return db
+      .prepare(
+        `
+    SELECT
+      id,
+      code as product_code,
+      name as product_name,
+      category as product_category,
+      quantity,
+      price,
+      (quantity * price) as total
+    FROM operation_items
+    WHERE operation_id = ?
+  `
+      )
+      .all(operationId) as OperationItemView[];
+  },
 
-}
+  deleteOperation(operationId: number) {
+    const trx = db.transaction(() => {
+      db.prepare(`DELETE FROM operation_items WHERE operation_id = ?`).run(
+        operationId
+      );
+
+      db.prepare(`DELETE FROM operations WHERE id = ?`).run(operationId);
+    });
+
+    return trx();
+  },
+};

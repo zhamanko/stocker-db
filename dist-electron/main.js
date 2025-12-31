@@ -16,7 +16,7 @@ function createTables(db2) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
-        category TEXT,
+        category TEXT NOT NULL,
         quantity INTEGER DEFAULT 0,
         price REAL DEFAULT 0
       );
@@ -45,7 +45,9 @@ function createTables(db2) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
         operation_id INTEGER NOT NULL, 
-        product_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
 
         quantity INTEGER NOT NULL,
         price REAL NOT NULL
@@ -131,43 +133,53 @@ const ProductRepo = {
 const OperationRepo = {
   create(operation) {
     const trx = db.transaction(() => {
-      const result = db.prepare(`
-        INSERT INTO operations (type, date, comment)
-        VALUES (?, ?, ?)
-      `).run(
+      const result = db.prepare(
+        `
+      INSERT INTO operations (type, date, comment)
+      VALUES (?, ?, ?)
+    `
+      ).run(
         operation.type,
         operation.date ?? (/* @__PURE__ */ new Date()).toISOString(),
         operation.comment ?? null
       );
-      const operationId = result.lastInsertRowid;
+      const operationId = Number(result.lastInsertRowid);
       for (const item of operation.items) {
-        if (operation.type === "out") {
-          const product = db.prepare(`
-            SELECT quantity FROM products WHERE id = ?
-          `).get(item.product_id);
-          if (!product) {
-            throw new Error("Товар не знайдено");
-          }
-          if (product.quantity < item.quantity) {
-            throw new Error("Недостатньо товару на складі");
-          }
+        const product = db.prepare(
+          `
+        SELECT code, name, category, quantity
+        FROM products
+        WHERE id = ?
+      `
+        ).get(item.product_id);
+        if (!product) {
+          throw new Error("Товар не знайдено");
         }
-        db.prepare(`
-          INSERT INTO operation_items
-          (operation_id, product_id, quantity, price)
-          VALUES (?, ?, ?, ?)
-        `).run(
+        if (operation.type === "out" && product.quantity < item.quantity) {
+          throw new Error("Недостатньо товару на складі");
+        }
+        db.prepare(
+          `
+        INSERT INTO operation_items
+        (operation_id, code, name, category, quantity, price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `
+        ).run(
           operationId,
-          item.product_id,
+          product.code,
+          product.name,
+          product.category,
           item.quantity,
           item.price
         );
         const delta = operation.type === "in" ? item.quantity : -item.quantity;
-        db.prepare(`
-          UPDATE products
-          SET quantity = quantity + ?
-          WHERE id = ?
-        `).run(delta, item.product_id);
+        db.prepare(
+          `
+        UPDATE products
+        SET quantity = quantity + ?
+        WHERE id = ?
+      `
+        ).run(delta, item.product_id);
       }
       return operationId;
     });
@@ -176,13 +188,16 @@ const OperationRepo = {
   getList(params) {
     const { limit = 30, offset = 0, type, from, to, search } = params;
     let query = `
-      SELECT o.id, o.type, o.date, o.comment,
-        COALESCE(SUM(oi.quantity * oi.price), 0) as total
-      FROM operations o
-      LEFT JOIN operation_items oi ON o.id = oi.operation_id
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1 
-    `;
+    SELECT
+      o.id,
+      o.type,
+      o.date,
+      o.comment,
+      COALESCE(SUM(oi.quantity * oi.price), 0) AS total
+    FROM operations o
+    LEFT JOIN operation_items oi ON o.id = oi.operation_id
+    WHERE 1=1
+  `;
     const args = [];
     if (type) {
       query += ` AND o.type = ?`;
@@ -197,43 +212,66 @@ const OperationRepo = {
       args.push(to);
     }
     if (search) {
-      query += ` AND (p.code LIKE ? OR p.name LIKE ?)`;
-      args.push(`%${search}%`, `%${search}%`);
+      query += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      args.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     query += `
-      GROUP BY o.id
-      ORDER BY o.date DESC
-      LIMIT ? OFFSET ? 
-    `;
+    GROUP BY o.id
+    ORDER BY o.date DESC
+    LIMIT ? OFFSET ?
+  `;
     args.push(limit, offset);
     const items = db.prepare(query).all(...args);
-    const totalQuery = `
-      SELECT COUNT(DISTINCT o.id) as count
-      FROM operations o
-      LEFT JOIN operation_items oi ON o.id = oi.operation_id
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE 1=1
-      ${type ? " AND o.type = ?" : ""}
-      ${from ? " AND DATE(o.date) >= DATE(?)" : ""}
-      ${to ? " AND DATE(o.date) <= DATE(?)" : ""}
-      ${search ? " AND (p.code LIKE ? OR p.name LIKE ?)" : ""}
-    `;
+    let totalQuery = `
+    SELECT COUNT(DISTINCT o.id) as count
+    FROM operations o
+    LEFT JOIN operation_items oi ON o.id = oi.operation_id
+    WHERE 1=1
+  `;
     const totalArgs = [];
-    if (type) totalArgs.push(type);
-    if (from) totalArgs.push(from);
-    if (to) totalArgs.push(to);
-    if (search) totalArgs.push(`%${search}%`, `%${search}%`);
-    const { count: total = 0 } = db.prepare(totalQuery).get(...totalArgs) || {};
-    return { items, total };
+    if (type) {
+      totalQuery += ` AND o.type = ?`;
+      totalArgs.push(type);
+    }
+    if (from) {
+      totalQuery += ` AND DATE(o.date) >= DATE(?)`;
+      totalArgs.push(from);
+    }
+    if (to) {
+      totalQuery += ` AND DATE(o.date) <= DATE(?)`;
+      totalArgs.push(to);
+    }
+    if (search) {
+      totalQuery += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      totalArgs.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    const { count = 0 } = db.prepare(totalQuery).get(...totalArgs);
+    return { items, total: count };
   },
   getItems(operationId) {
-    return db.prepare(`
-      SELECT oi.id, p.code as product_code, p.name as product_name,
-             oi.quantity, oi.price, (oi.quantity * oi.price) as total
-      FROM operation_items oi
-      LEFT JOIN products p ON oi.product_id = p.id
-      WHERE oi.operation_id = ?
-    `).all(operationId);
+    return db.prepare(
+      `
+    SELECT
+      id,
+      code as product_code,
+      name as product_name,
+      category as product_category,
+      quantity,
+      price,
+      (quantity * price) as total
+    FROM operation_items
+    WHERE operation_id = ?
+  `
+    ).all(operationId);
+  },
+  deleteOperation(operationId) {
+    const trx = db.transaction(() => {
+      db.prepare(`DELETE FROM operation_items WHERE operation_id = ?`).run(
+        operationId
+      );
+      db.prepare(`DELETE FROM operations WHERE id = ?`).run(operationId);
+    });
+    return trx();
   }
 };
 ipcMain.handle("products:list", (_e, params) => {
@@ -281,6 +319,9 @@ ipcMain.handle("operations:list", (_e, params) => {
 });
 ipcMain.handle("operations:getItems", (_e, operationId) => {
   return OperationRepo.getItems(operationId);
+});
+ipcMain.handle("operations:delete", (_e, operationId) => {
+  return OperationRepo.deleteOperation(operationId);
 });
 const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");
