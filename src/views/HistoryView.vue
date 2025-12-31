@@ -50,8 +50,7 @@ async function removeOperation(id: number) {
   if (!confirm("Впевнені, що потрібно видалити операцію?")) return;
 
   try {
-    await deleteOperation(id); // викликаємо метод сервісу, який видаляє операцію
-    // оновлюємо список після видалення
+    await deleteOperation(id);
     await loadOperations();
     alert("Операція видалена");
   } catch (e: any) {
@@ -86,7 +85,7 @@ function prevPage() {
 function formatDate(dateString: string | Date): string {
     const date = typeof dateString === "string" ? new Date(dateString) : dateString;
     const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Місяці в JS з 0
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}.${month}.${year}`;
 }
@@ -129,7 +128,7 @@ onMounted(loadOperations);
 
             <div class="space-x-2 flex flex-col">
                 <label>Пошук:</label>
-                <input type="text" v-model="searchFilter" placeholder="(код або назва)" class="w-60 border border-gray-400  rounded p-1" />
+                <input type="text" v-model="searchFilter" placeholder="Пошук..." class="w-60 border border-gray-400  rounded p-1" />
             </div>
 
             <button @click="resetFilters" class="bg-blue-500 text-white px-4 py-2 rounded-2xl">Скинути</button>
