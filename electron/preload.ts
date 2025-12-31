@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
+    on: (channel: string, func: (...args: any[]) => void) => {
+    ipcRenderer.on(channel, (_event, ...args) => func(...args));
+  },
+  send: (channel: string, data?: any) => {
+    ipcRenderer.send(channel, data);
+  },
   getProducts: (params: { search?: string; limit?: number; offset?: number }) =>
     ipcRenderer.invoke("products:list", params),
   addProduct: (product: any) => ipcRenderer.invoke("products:add", product),

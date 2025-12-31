@@ -1,13 +1,17 @@
-import { app as m, ipcMain as c, BrowserWindow as g } from "electron";
-import { fileURLToPath as S } from "node:url";
-import p from "node:path";
-import U from "better-sqlite3";
-import L from "path";
-import y from "fs";
-import { fileURLToPath as P } from "url";
-function w(e) {
-  const t = (r) => !!e.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(r);
-  t("products") ? console.log('ℹ️ Table "products" already exists') : (e.exec(`
+import { app, ipcMain, BrowserWindow } from "electron";
+import { fileURLToPath as fileURLToPath$1 } from "node:url";
+import path$1 from "node:path";
+import Database from "better-sqlite3";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+function createTables(db2) {
+  const tableExists = (name) => {
+    const row = db2.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(name);
+    return !!row;
+  };
+  if (!tableExists("products")) {
+    db2.exec(`
       CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL,
@@ -16,7 +20,13 @@ function w(e) {
         quantity INTEGER DEFAULT 0,
         price REAL DEFAULT 0
       );
-    `), console.log('✅ Table "products" created')), t("operations") ? console.log('ℹ️ Table "operations" already exists') : (e.exec(`
+    `);
+    console.log('✅ Table "products" created');
+  } else {
+    console.log('ℹ️ Table "products" already exists');
+  }
+  if (!tableExists("operations")) {
+    db2.exec(`
       CREATE TABLE operations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -24,7 +34,13 @@ function w(e) {
         date TEXT DEFAULT CURRENT_TIMESTAMP,
         comment TEXT
       );
-    `), console.log('✅ Table "operations" created')), t("operation_items") ? console.log('ℹ️ Table "operation_items" already exists') : (e.exec(`
+    `);
+    console.log('✅ Table "operations" created');
+  } else {
+    console.log('ℹ️ Table "operations" already exists');
+  }
+  if (!tableExists("operation_items")) {
+    db2.exec(`
       CREATE TABLE operation_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -36,58 +52,69 @@ function w(e) {
         quantity INTEGER NOT NULL,
         price REAL NOT NULL
       );
-    `), console.log('✅ Table "operation_items" created'));
+    `);
+    console.log('✅ Table "operation_items" created');
+  } else {
+    console.log('ℹ️ Table "operation_items" already exists');
+  }
 }
-const C = P(import.meta.url), M = L.dirname(C), q = m.isPackaged, O = q ? L.join(process.resourcesPath, "database") : L.join(M, "database"), F = L.join(O, "app.db");
-y.existsSync(O) || y.mkdirSync(O, { recursive: !0 });
-const o = new U(F);
-o.pragma("journal_mode = WAL");
-o.pragma("foreign_keys = ON");
-function b() {
-  w(o);
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$2 = path.dirname(__filename$1);
+const isProd = app.isPackaged;
+const basePath = isProd ? path.join(process.resourcesPath, "database") : path.join(__dirname$2, "database");
+const dbPath = path.join(basePath, "app.db");
+if (!fs.existsSync(basePath)) {
+  fs.mkdirSync(basePath, { recursive: true });
 }
-const d = {
-  getListInput(e) {
-    const t = e ? "WHERE name LIKE @search OR code LIKE @search OR category LIKE @search LIMIT 10" : "";
-    return o.prepare(
+const db = new Database(dbPath);
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+function initDb() {
+  createTables(db);
+}
+const ProductRepo = {
+  getListInput(search) {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search LIMIT 10` : "";
+    return db.prepare(
       `SELECT id, code, name, quantity FROM products
-        ${t}`
+        ${where}`
     ).all({
-      search: `%${e}%`
+      search: `%${search}%`
     });
   },
-  getList({ search: e = "", limit: t = 50, offset: r = 0 }) {
-    const a = e ? "WHERE name LIKE @search OR code LIKE @search OR category LIKE @search" : "";
-    return o.prepare(
+  getList({ search = "", limit = 50, offset = 0 }) {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search` : "";
+    return db.prepare(
       `SELECT * FROM products
-        ${a}
+        ${where}
         LIMIT @limit OFFSET @offset`
     ).all({
-      search: `%${e}%`,
-      limit: t,
-      offset: r
+      search: `%${search}%`,
+      limit,
+      offset
     });
   },
-  count(e = "") {
-    const t = e ? "WHERE name LIKE @search OR code LIKE @search OR category LIKE @search" : "";
-    return o.prepare(
+  count(search = "") {
+    const where = search ? `WHERE name LIKE @search OR code LIKE @search OR category LIKE @search` : "";
+    const result = db.prepare(
       `SELECT COUNT(*) as count 
-        FROM products ${t}`
-    ).get({ search: `%${e}%` }).count;
+        FROM products ${where}`
+    ).get({ search: `%${search}%` });
+    return result.count;
   },
-  getById(e) {
-    return o.prepare("SELECT * FROM products WHERE id = ?").get(e);
+  getById(id) {
+    return db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
   },
-  create(e) {
-    return o.prepare(
+  create(product) {
+    return db.prepare(
       `
       INSERT INTO products (code, name, category, quantity, price)
       VALUES (@code, @name, @category, @quantity, @price)
     `
-    ).run(e);
+    ).run(product);
   },
-  update(e, t) {
-    return o.prepare(
+  update(id, product) {
+    return db.prepare(
       `
       UPDATE products
       SET code = @code,
@@ -97,65 +124,70 @@ const d = {
           price = @price
       WHERE id = @id
     `
-    ).run({ ...t, id: e });
+    ).run({ ...product, id });
   },
-  delete(e) {
-    return o.prepare("DELETE FROM products WHERE id = ?").run(e);
+  delete(id) {
+    return db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
   }
-}, I = {
-  create(e) {
-    return o.transaction(() => {
-      const r = o.prepare(
+};
+const OperationRepo = {
+  create(operation) {
+    const trx = db.transaction(() => {
+      const result = db.prepare(
         `
       INSERT INTO operations (type, date, comment)
       VALUES (?, ?, ?)
     `
       ).run(
-        e.type,
-        e.date ?? (/* @__PURE__ */ new Date()).toISOString(),
-        e.comment ?? null
-      ), a = Number(r.lastInsertRowid);
-      for (const n of e.items) {
-        const i = o.prepare(
+        operation.type,
+        operation.date ?? (/* @__PURE__ */ new Date()).toISOString(),
+        operation.comment ?? null
+      );
+      const operationId = Number(result.lastInsertRowid);
+      for (const item of operation.items) {
+        const product = db.prepare(
           `
         SELECT code, name, category, quantity
         FROM products
         WHERE id = ?
       `
-        ).get(n.product_id);
-        if (!i)
+        ).get(item.product_id);
+        if (!product) {
           throw new Error("Товар не знайдено");
-        if (e.type === "out" && i.quantity < n.quantity)
+        }
+        if (operation.type === "out" && product.quantity < item.quantity) {
           throw new Error("Недостатньо товару на складі");
-        o.prepare(
+        }
+        db.prepare(
           `
         INSERT INTO operation_items
         (operation_id, code, name, category, quantity, price)
         VALUES (?, ?, ?, ?, ?, ?)
       `
         ).run(
-          a,
-          i.code,
-          i.name,
-          i.category,
-          n.quantity,
-          n.price
+          operationId,
+          product.code,
+          product.name,
+          product.category,
+          item.quantity,
+          item.price
         );
-        const s = e.type === "in" ? n.quantity : -n.quantity;
-        o.prepare(
+        const delta = operation.type === "in" ? item.quantity : -item.quantity;
+        db.prepare(
           `
         UPDATE products
         SET quantity = quantity + ?
         WHERE id = ?
       `
-        ).run(s, n.product_id);
+        ).run(delta, item.product_id);
       }
-      return a;
-    })();
+      return operationId;
+    });
+    return trx();
   },
-  getList(e) {
-    const { limit: t = 30, offset: r = 0, type: a, from: n, to: i, search: s } = e;
-    let u = `
+  getList(params) {
+    const { limit = 30, offset = 0, type, from, to, search } = params;
+    let query = `
     SELECT
       o.id,
       o.type,
@@ -166,26 +198,58 @@ const d = {
     LEFT JOIN operation_items oi ON o.id = oi.operation_id
     WHERE 1=1
   `;
-    const T = [];
-    a && (u += " AND o.type = ?", T.push(a)), n && (u += " AND DATE(o.date) >= DATE(?)", T.push(n)), i && (u += " AND DATE(o.date) <= DATE(?)", T.push(i)), s && (u += " AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)", T.push(`%${s}%`, `%${s}%`, `%${s}%`)), u += `
+    const args = [];
+    if (type) {
+      query += ` AND o.type = ?`;
+      args.push(type);
+    }
+    if (from) {
+      query += ` AND DATE(o.date) >= DATE(?)`;
+      args.push(from);
+    }
+    if (to) {
+      query += ` AND DATE(o.date) <= DATE(?)`;
+      args.push(to);
+    }
+    if (search) {
+      query += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      args.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    query += `
     GROUP BY o.id
     ORDER BY o.date DESC
     LIMIT ? OFFSET ?
-  `, T.push(t, r);
-    const f = o.prepare(u).all(...T);
-    let l = `
+  `;
+    args.push(limit, offset);
+    const items = db.prepare(query).all(...args);
+    let totalQuery = `
     SELECT COUNT(DISTINCT o.id) as count
     FROM operations o
     LEFT JOIN operation_items oi ON o.id = oi.operation_id
     WHERE 1=1
   `;
-    const R = [];
-    a && (l += " AND o.type = ?", R.push(a)), n && (l += " AND DATE(o.date) >= DATE(?)", R.push(n)), i && (l += " AND DATE(o.date) <= DATE(?)", R.push(i)), s && (l += " AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)", R.push(`%${s}%`, `%${s}%`, `%${s}%`));
-    const { count: D = 0 } = o.prepare(l).get(...R);
-    return { items: f, total: D };
+    const totalArgs = [];
+    if (type) {
+      totalQuery += ` AND o.type = ?`;
+      totalArgs.push(type);
+    }
+    if (from) {
+      totalQuery += ` AND DATE(o.date) >= DATE(?)`;
+      totalArgs.push(from);
+    }
+    if (to) {
+      totalQuery += ` AND DATE(o.date) <= DATE(?)`;
+      totalArgs.push(to);
+    }
+    if (search) {
+      totalQuery += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
+      totalArgs.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    const { count = 0 } = db.prepare(totalQuery).get(...totalArgs);
+    return { items, total: count };
   },
-  getItems(e) {
-    return o.prepare(
+  getItems(operationId) {
+    return db.prepare(
       `
     SELECT
       id,
@@ -198,72 +262,108 @@ const d = {
     FROM operation_items
     WHERE operation_id = ?
   `
-    ).all(e);
+    ).all(operationId);
   },
-  deleteOperation(e) {
-    return o.transaction(() => {
-      o.prepare("DELETE FROM operation_items WHERE operation_id = ?").run(
-        e
-      ), o.prepare("DELETE FROM operations WHERE id = ?").run(e);
-    })();
+  deleteOperation(operationId) {
+    const trx = db.transaction(() => {
+      db.prepare(`DELETE FROM operation_items WHERE operation_id = ?`).run(
+        operationId
+      );
+      db.prepare(`DELETE FROM operations WHERE id = ?`).run(operationId);
+    });
+    return trx();
   }
 };
-c.handle("products:list", (e, t) => {
-  const r = d.getList(t), a = d.count(t.search || "");
-  return { items: r, total: a };
+ipcMain.handle("products:list", (_e, params) => {
+  const items = ProductRepo.getList(params);
+  const total = ProductRepo.count(params.search || "");
+  return { items, total };
 });
-c.handle("products:add", (e, t) => (d.create(t), !0));
-c.handle("products:update", (e, t) => {
-  if (!t.id)
+ipcMain.handle("products:add", (_, product) => {
+  ProductRepo.create(product);
+  return true;
+});
+ipcMain.handle("products:update", (_, product) => {
+  if (!product.id) {
     throw new Error("Product ID is required for update");
-  return d.update(t.id, t), !0;
+  }
+  ProductRepo.update(product.id, product);
+  return true;
 });
-c.handle("products:delete", (e, t) => (d.delete(t), !0));
-c.handle("products:getById", (e, t) => d.getById(t));
-c.handle("products:getListInput", (e, t) => d.getListInput(t));
-c.handle("operation:add", (e, t) => {
+ipcMain.handle("products:delete", (_, id) => {
+  ProductRepo.delete(id);
+  return true;
+});
+ipcMain.handle("products:getById", (_, id) => {
+  return ProductRepo.getById(id);
+});
+ipcMain.handle("products:getListInput", (_, params) => {
+  return ProductRepo.getListInput(params);
+});
+ipcMain.handle("operation:add", (_, operation) => {
   try {
-    const r = I.create(t);
+    const operationId = OperationRepo.create(operation);
     return {
-      success: !0,
-      id: Number(r)
+      success: true,
+      id: Number(operationId)
     };
-  } catch (r) {
+  } catch (e) {
     return {
-      success: !1,
-      message: r.message
+      success: false,
+      message: e.message
     };
   }
 });
-c.handle("operations:list", (e, t) => I.getList(t));
-c.handle("operations:getItems", (e, t) => I.getItems(t));
-c.handle("operations:delete", (e, t) => I.deleteOperation(t));
-const _ = p.dirname(S(import.meta.url));
-process.env.APP_ROOT = p.join(_, "..");
-const N = process.env.VITE_DEV_SERVER_URL, V = p.join(process.env.APP_ROOT, "dist-electron"), h = p.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = N ? p.join(process.env.APP_ROOT, "public") : h;
-let E;
-function A() {
-  E = new g({
-    icon: p.join(process.env.VITE_PUBLIC, "logo.png"),
+ipcMain.handle("operations:list", (_e, params) => {
+  return OperationRepo.getList(params);
+});
+ipcMain.handle("operations:getItems", (_e, operationId) => {
+  return OperationRepo.getItems(operationId);
+});
+ipcMain.handle("operations:delete", (_e, operationId) => {
+  return OperationRepo.deleteOperation(operationId);
+});
+const __dirname$1 = path$1.dirname(fileURLToPath$1(import.meta.url));
+process.env.APP_ROOT = path$1.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path$1.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path$1.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$1.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path$1.join(process.env.VITE_PUBLIC, "logo.png"),
     webPreferences: {
-      preload: p.join(_, "preload.mjs")
+      preload: path$1.join(__dirname$1, "preload.mjs")
     }
-  }), E.maximize(), E.webContents.on("did-finish-load", () => {
-    E == null || E.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), N ? E.loadURL(N) : E.loadFile(p.join(h, "index.html"));
+  });
+  win.maximize();
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path$1.join(RENDERER_DIST, "index.html"));
+  }
 }
-m.on("window-all-closed", () => {
-  process.platform !== "darwin" && (m.quit(), E = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-m.on("activate", () => {
-  g.getAllWindows().length === 0 && A();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-m.whenReady().then(() => {
-  b(), A();
+app.whenReady().then(() => {
+  initDb();
+  createWindow();
 });
 export {
-  V as MAIN_DIST,
-  h as RENDERER_DIST,
-  N as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
