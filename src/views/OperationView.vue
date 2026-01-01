@@ -3,6 +3,30 @@ import { watch, ref } from 'vue';
 import { createOperation } from '../service/operation.service';
 import { ProductCheck } from '../api/api'
 import SearchInput from '../components/SearchInput.vue';
+import Messenge from '../components/Messenge.vue';
+
+type massageType = {
+  massage: string,
+  type: 'info' | 'confirm',
+  id?: number
+}
+
+const massageIsOpen = ref<boolean>(false)
+const massageArr = ref<massageType | null>(null)
+
+function showMassage(massage: string, type: 'info' | 'confirm', id?: number) {
+  massageArr.value = {
+    massage,
+    type,
+    id
+  }
+  massageIsOpen.value = true;
+}
+
+
+function userResponse(data: { confirmed: boolean, id?: number }) {
+  if(data.confirmed) massageIsOpen.value = false
+}
 
 export type Item = {
   product: string;
@@ -27,10 +51,10 @@ async function addOperation() {
   try {
     const id = await createOperation(payload)
     console.log(id)
-    alert('Операція збережена')
+    showMassage('Операція збережена', 'info')
     resetForm()
   } catch (e: any) {
-    alert(e.message)
+    showMassage(e.message, 'info')
   }
 }
 
@@ -139,4 +163,6 @@ watch(items, (newItems) => {
       </button>
     </div>
   </div>
+  <Messenge v-if="massageIsOpen && massageArr" :massage="massageArr.massage" :type="massageArr.type" :id="massageArr.id"
+    @user-response="userResponse" />
 </template>

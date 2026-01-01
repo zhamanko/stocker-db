@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import ProductForm from '../components/ProductForm.vue'
+import Messenge from '../components/Messenge.vue'
 
 import { computed, watch, ref } from 'vue'
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../service/product.service'
 import { Product } from './../api/api'
+
+type massageType = {
+    massage: string,
+    type: 'info' | 'confirm',
+    id?: number
+}
+const massageIsOpen = ref<boolean>(false)
+const massageArr = ref<massageType | null>(null)
 
 let searchTimeout: number | null = null
 
@@ -63,14 +72,6 @@ function save(item: Product) {
     }
 }
 
-function deleteProducte(id: number) {
-    if (confirm("Впевнені, що потрібно видалити?")) {
-        deleteProduct(id).then(() => {
-            loadProducts()
-        })
-    }
-}
-
 function onSearchInput(value: string) {
     if (searchTimeout) {
         clearTimeout(searchTimeout)
@@ -94,6 +95,29 @@ function sort(key: SortKey) {
     }
 }
 
+function showMassage(massage: string, type: 'info' | 'confirm', id?: number) {
+    massageArr.value = {
+        massage,
+        type,
+        id
+    }
+    massageIsOpen.value = true;
+}
+
+
+type UserResponse = {
+    confirmed: boolean
+    id?: number
+}
+
+function userResponse(data: UserResponse) {
+    massageIsOpen.value = false
+    if (data.confirmed && data.id != null) {
+        deleteProduct(data.id).then(() => {
+            loadProducts()
+        })
+    }
+}
 
 
 watch(total, (newTotal) => {
@@ -245,7 +269,8 @@ loadProducts()
                     <div class="space-x-2 text-white">
                         <button @click="selectedProduct = product; openModal = true"
                             class="bg-blue-500 px-4 py-1 rounded hover:bg-blue-600 transition">Редагувати</button>
-                        <button @click="product.id !== undefined && deleteProducte(product.id)"
+                        <button
+                            @click="product.id !== undefined && showMassage('Впевнені що хочете видалити?', 'confirm', product.id)"
                             class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition">Видалити</button>
                     </div>
                 </td>
@@ -270,4 +295,6 @@ loadProducts()
     <ProductForm v-if="openModal" @close="openModal = false; selectedProduct = null" :item="selectedProduct"
         @save="save" />
 
+    <Messenge v-if="massageIsOpen && massageArr" :massage="massageArr.massage" :type="massageArr.type"
+        :id="massageArr.id" @user-response="userResponse" />
 </template>

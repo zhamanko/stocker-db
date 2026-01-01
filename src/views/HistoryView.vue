@@ -2,6 +2,40 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { OperationRow, OperationItemView } from "../api/api";
 import { getOperationItems, getOperations, deleteOperation } from '../service/operation.service'
+import Messenge from '../components/Messenge.vue';
+
+type massageType = {
+    massage: string,
+    type: 'info' | 'confirm',
+    id?: number
+}
+
+const massageIsOpen = ref<boolean>(false)
+const massageArr = ref<massageType | null>(null)
+
+function showMassage(massage: string, type: 'info' | 'confirm', id?: number) {
+    massageArr.value = {
+        massage,
+        type,
+        id
+    }
+    massageIsOpen.value = true;
+}
+
+
+async function userResponse(data: { confirmed: boolean, id?: number }) {
+    if (data.confirmed && data.id != null) {
+        try {
+            await deleteOperation(data.id);
+            massageIsOpen.value = false;
+            await loadOperations();
+        } catch (e: any) {
+            massageIsOpen.value = false;
+            showMassage(e.message, 'info');
+        }
+    }
+    massageIsOpen.value = false;
+}
 
 // --- Данні ---
 const operations = ref<OperationRow[]>([]);
@@ -46,17 +80,6 @@ async function loadOperations() {
     }
 }
 
-async function removeOperation(id: number) {
-  if (!confirm("Впевнені, що потрібно видалити операцію?")) return;
-
-  try {
-    await deleteOperation(id);
-    await loadOperations();
-    alert("Операція видалена");
-  } catch (e: any) {
-    alert(e.message);
-  }
-}
 
 // --- Скидання фільтрів ---
 function resetFilters() {
@@ -128,22 +151,25 @@ onMounted(loadOperations);
 
             <div class="space-x-2 flex flex-col">
                 <label>Пошук:</label>
-                <input type="text" v-model="searchFilter" placeholder="Пошук..." class="w-60 border border-gray-400  rounded p-1" />
+                <input type="text" v-model="searchFilter" placeholder="Пошук..."
+                    class="w-60 border border-gray-400  rounded p-1" />
             </div>
 
             <button @click="resetFilters" class="bg-blue-500 text-white px-4 py-2 rounded-2xl">Скинути</button>
         </div>
 
         <div class="flex justify-center gap-2 mb-4" :class="totalPages <= 1 ? 'hidden' : ''">
-            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
 
             </button>
             <span>{{ currentPage }} з {{ totalPages }}</span>
-            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg"
-                    fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
 
@@ -156,8 +182,8 @@ onMounted(loadOperations);
                 <div class="flex justify-between">
                     <h2 class="font-bold text-lg">{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
                     <span>{{ formatDate(op.date) }}</span>
-                    <button @click="removeOperation(op.id)"
-                    class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
+                    <button @click="showMassage('Впевнені що потрібно видалити?', 'confirm', op.id)"
+                        class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
                 </div>
                 <table class="w-full">
                     <thead>
@@ -178,7 +204,7 @@ onMounted(loadOperations);
                             <td class="py-2 border-x w-70">{{ item.product_category }}</td>
                             <td class="py-2 w-40">{{ item.quantity }}</td>
                             <td class="py-2 border-x w-40">{{ item.price }}</td>
-                            <td class="py-2">{{ item.total}} $</td>
+                            <td class="py-2">{{ item.total }} $</td>
                         </tr>
                     </tbody>
                 </table>
@@ -189,25 +215,30 @@ onMounted(loadOperations);
             </div>
         </div>
 
-    <div v-else>
-        <p class="text-center text-lg">Нічого не знайдено</p>
-    </div>
+        <div v-else>
+            <p class="text-center text-lg">Нічого не знайдено</p>
+        </div>
 
 
         <div class="flex justify-center gap-2 mt-4" :class="totalPages <= 1 ? 'hidden' : ''">
-            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <button @click="prevPage" class="cursor-pointer" :class="currentPage === 1 ? 'hidden' : ''"><svg
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
 
             </button>
             <span>{{ currentPage }} з {{ totalPages }}</span>
-            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg xmlns="http://www.w3.org/2000/svg"
-                    fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <button @click="nextPage" class="cursor-pointer" :class="currentPage === totalPages ? 'hidden' : ''"><svg
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
 
             </button>
         </div>
     </div>
+
+    <Messenge v-if="massageIsOpen && massageArr" :massage="massageArr.massage" :type="massageArr.type"
+        :id="massageArr.id" @user-response="userResponse" />
 </template>
