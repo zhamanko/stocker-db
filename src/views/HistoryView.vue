@@ -182,7 +182,7 @@ onMounted(loadOperations);
                 <div class="flex justify-between">
                     <h2 class="font-bold text-lg">{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
                     <span>{{ formatDate(op.date) }}</span>
-                    <button @click="showMassage('Впевнені що потрібно видалити?', 'confirm', op.id)"
+                    <button @click="showMassage('Ви дійсно хочете видалити цей запис?', 'confirm', op.id)"
                         class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
                 </div>
                 <table class="w-full">

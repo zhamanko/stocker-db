@@ -270,7 +270,7 @@ loadProducts()
                         <button @click="selectedProduct = product; openModal = true"
                             class="bg-blue-500 px-4 py-1 rounded hover:bg-blue-600 transition">Редагувати</button>
                         <button
-                            @click="product.id !== undefined && showMassage('Впевнені що хочете видалити?', 'confirm', product.id)"
+                            @click="product.id !== undefined && showMassage('Ви дійсно хочете видалити цей запис?', 'confirm', product.id)"
                             class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition">Видалити</button>
                     </div>
                 </td>
