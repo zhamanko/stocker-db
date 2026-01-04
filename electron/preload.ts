@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
-    on: (channel: string, func: (...args: any[]) => void) => {
+  on: (channel: string, func: (...args: any[]) => void) => {
     ipcRenderer.on(channel, (_event, ...args) => func(...args));
   },
   send: (channel: string, data?: any) => {
@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld("api", {
     from?: string;
     to?: string;
     productId?: number;
-    type?: 'in' | 'out';
+    type?: "in" | "out";
     search?: string;
     limit?: number;
     offset?: number;
@@ -36,5 +36,5 @@ contextBridge.exposeInMainWorld("api", {
   getOperationItems: (operationId: number) =>
     ipcRenderer.invoke("operations:getItems", operationId),
   deleteOperation: (operationId: number) =>
-    ipcRenderer.invoke("operations:delete", operationId)
+    ipcRenderer.invoke("operations:delete", operationId),
 });

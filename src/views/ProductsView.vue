@@ -30,7 +30,6 @@ type SortKey = keyof Product | null
 const sortKey = ref<keyof Product | null>(null)
 const sortDir = ref<'asc' | 'desc'>('asc')
 
-
 const sortedProducts = computed(() => {
     if (!sortKey.value) return products.value
 

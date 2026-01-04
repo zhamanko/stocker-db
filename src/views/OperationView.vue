@@ -25,7 +25,7 @@ function showMassage(massage: string, type: 'info' | 'confirm', id?: number) {
 
 
 function userResponse(data: { confirmed: boolean, id?: number }) {
-  if(data.confirmed) massageIsOpen.value = false
+  if (data.confirmed) massageIsOpen.value = false
 }
 
 export type Item = {
@@ -49,8 +49,7 @@ async function addOperation() {
   }
 
   try {
-    const id = await createOperation(payload)
-    console.log(id)
+    await createOperation(payload)
     showMassage('Операція збережена', 'info')
     resetForm()
   } catch (e: any) {
@@ -155,12 +154,14 @@ watch(items, (newItems) => {
         позицію</button>
     </div>
 
-
-    <div class="flex flex-col justify-end items-end gap-2">
-      <span><strong>Загальна сума:</strong> {{ totalPrice }} $</span>
-      <button @click="addOperation" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
-        Зберегти операцію
-      </button>
+    <div>
+      <p class="text-gray-500 text-sm">*Товар обов’язково потрібно обрати зі списку. Якщо його немає, перевірте загальну таблицю товарів.</p>
+      <div class="flex flex-col justify-end items-end gap-2">
+        <span><strong>Загальна сума:</strong> {{ totalPrice }} $ </span>
+        <button @click="addOperation" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
+          Зберегти операцію
+        </button>
+      </div>
     </div>
   </div>
   <Messenge v-if="massageIsOpen && massageArr" :massage="massageArr.massage" :type="massageArr.type" :id="massageArr.id"

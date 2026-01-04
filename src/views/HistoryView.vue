@@ -10,16 +10,16 @@ type massageType = {
     id?: number
 }
 
-const massageIsOpen = ref<boolean>(false)
-const massageArr = ref<massageType | null>(null)
+const messageShow = ref<boolean>(false)
+const messageState = ref<massageType | null>(null)
 
 function showMassage(massage: string, type: 'info' | 'confirm', id?: number) {
-    massageArr.value = {
+    messageState.value = {
         massage,
         type,
         id
     }
-    massageIsOpen.value = true;
+    messageShow.value = true;
 }
 
 
@@ -27,14 +27,14 @@ async function userResponse(data: { confirmed: boolean, id?: number }) {
     if (data.confirmed && data.id != null) {
         try {
             await deleteOperation(data.id);
-            massageIsOpen.value = false;
+            messageShow.value = false;
             await loadOperations();
         } catch (e: any) {
-            massageIsOpen.value = false;
+            messageShow.value = false;
             showMassage(e.message, 'info');
         }
     }
-    massageIsOpen.value = false;
+    messageShow.value = false;
 }
 
 // --- Данні ---
@@ -239,6 +239,8 @@ onMounted(loadOperations);
         </div>
     </div>
 
-    <Messenge v-if="massageIsOpen && massageArr" :massage="massageArr.massage" :type="massageArr.type"
-        :id="massageArr.id" @user-response="userResponse" />
+    <Messenge v-if="messageShow && messageState" 
+    :massage="messageState.massage" 
+    :type="messageState.type"
+    :id="messageState.id" @user-response="userResponse" />
 </template>

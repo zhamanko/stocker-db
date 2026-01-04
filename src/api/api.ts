@@ -74,7 +74,6 @@ declare global {
         limit?: number;
         offset?: number;
       }) => Promise<OperationListResponse>;
-
       getOperationItems: (operationId: number) => Promise<OperationItemView[]>;
       deleteOperation: (operationId: number) => Promise<void>;
     };
@@ -110,8 +109,8 @@ export const api = {
     limit?: number;
     offset?: number;
   }): Promise<OperationListResponse> => window.api.getOperations(params),
-
   getOperationItems: (operationId: number): Promise<OperationItemView[]> =>
     window.api.getOperationItems(operationId),
-  deleteOperation: (id: number): Promise<void> => window.api.deleteOperation(id),
+  deleteOperation: (id: number): Promise<void> =>
+    window.api.deleteOperation(id),
 };

@@ -1,20 +1,20 @@
 import { db } from "./../sqlite";
 
 export type OperationRow = {
-  id: number; // ID операції
-  type: "in" | "out"; // тип операції: прихід або продаж
-  date: string; // дата операції
-  comment?: string; // коментар, якщо є
-  total: number; // загальна сума всіх позицій
+  id: number;
+  type: "in" | "out";
+  date: string;
+  comment?: string;
+  total: number;
 };
 
 export type OperationItemView = {
-  id: number; // ID позиції в операції (operation_items.id)
-  product_code: string; // код товару
-  product_name: string; // назва товару
-  quantity: number; // кількість товару в цій позиції
-  price: number; // ціна за одиницю
-  total: number; // total = quantity * price
+  id: number; 
+  product_code: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  total: number;
 };
 
 export type ProductItem = {

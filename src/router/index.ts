@@ -8,7 +8,8 @@ const routes = [
   { path: '/', redirect: '/products' },
   { path: '/products', component: ProductsView },
   { path: '/operation', component: OperationView },
-  { path: '/history', component: HistoryView }
+  { path: '/history', component: HistoryView },
+  { path: '/about', component: () => import('../views/AboutView.vue') }
 ]
 
 const router = createRouter({
