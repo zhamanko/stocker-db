@@ -253,6 +253,7 @@ loadProducts()
                     </div>
 
                 </th>
+                <th class="border-x border-gray-400">Сума</th>
                 <th class="rounded-tr-xl"></th>
             </tr>
         </thead>
@@ -264,6 +265,9 @@ loadProducts()
                 <td class="p-2 border-x border-b border-gray-400">{{ product.category }}</td>
                 <td class="p-2 border-x border-b border-gray-400">{{ product.quantity }}</td>
                 <td class="p-2 border-x border-b border-gray-400">{{ product.price }} $</td>
+                <td class="p-2 border-x border-b border-gray-400">
+                    {{ (product.quantity || 0) * (product.price || 0) }} $
+                </td>
                 <td class="p-2 w-70 border-b border-gray-400">
                     <div class="space-x-2 text-white">
                         <button @click="selectedProduct = product; openModal = true"

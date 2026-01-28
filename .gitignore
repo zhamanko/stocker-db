@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+
 release
 database
 node_modules
@@ -24,3 +25,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+dist-electron/preload.mjs
+dist-electron/main.js
+
