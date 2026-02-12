@@ -2,6 +2,10 @@ import { ipcMain } from 'electron'
 import { ProductRepo } from '../db/repositories/product.repo'
 import { OperationRepo } from '../db/repositories/operation.repo'
 
+ipcMain.handle('products:getSUM', () => {
+  return ProductRepo.getSUM();
+})
+
 ipcMain.handle('products:list', (_e, params) => {
   const items = ProductRepo.getList(params)
   const total = ProductRepo.count(params.search || "")

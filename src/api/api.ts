@@ -76,11 +76,13 @@ declare global {
       }) => Promise<OperationListResponse>;
       getOperationItems: (operationId: number) => Promise<OperationItemView[]>;
       deleteOperation: (operationId: number) => Promise<void>;
+      getSUM: () => Promise<{ total: number }>;
     };
   }
 }
 
 export const api = {
+  getSUM: (): Promise<{ total: number }> => window.api.getSUM(),
   getProducts: (params: {
     search?: string;
     limit?: number;

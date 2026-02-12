@@ -100,4 +100,8 @@ export const ProductRepo = {
   delete(id: number) {
     return db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
   },
+
+  getSUM() {
+    return db.prepare(`SELECT SUM(quantity * price) as total FROM products`).get();
+  },
 };

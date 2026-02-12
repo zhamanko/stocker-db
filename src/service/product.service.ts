@@ -8,6 +8,11 @@ export async function fetchProducts( page: number, search: string) {
   return response
 }
 
+export async function getProductsSUM() {
+  const response = await api.getSUM()
+  return response.total
+}
+
 export async function createProduct(product: Product) {
   await api.addProduct(product)
 }

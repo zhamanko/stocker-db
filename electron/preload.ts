@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("api", {
   send: (channel: string, data?: any) => {
     ipcRenderer.send(channel, data);
   },
+  getSUM : () => ipcRenderer.invoke("products:getSUM"),
   getProducts: (params: { search?: string; limit?: number; offset?: number }) =>
     ipcRenderer.invoke("products:list", params),
   addProduct: (product: any) => ipcRenderer.invoke("products:add", product),

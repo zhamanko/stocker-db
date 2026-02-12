@@ -3,7 +3,7 @@ import ProductForm from '../components/ProductForm.vue'
 import Messenge from '../components/Messenge.vue'
 
 import { computed, watch, ref } from 'vue'
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../service/product.service'
+import { fetchProducts, createProduct, updateProduct, deleteProduct, getProductsSUM } from '../service/product.service'
 import { Product } from './../api/api'
 
 type massageType = {
@@ -13,6 +13,8 @@ type massageType = {
 }
 const massageIsOpen = ref<boolean>(false)
 const massageArr = ref<massageType | null>(null)
+
+const productSUM = ref<number>(0)
 
 let searchTimeout: number | null = null
 
@@ -118,6 +120,11 @@ function userResponse(data: UserResponse) {
     }
 }
 
+watch(products, () => {
+    getProductsSUM().then(sum => {
+        productSUM.value = sum
+    })
+})
 
 watch(total, (newTotal) => {
     totalPages.value = Math.ceil(newTotal / 50)
@@ -128,6 +135,7 @@ loadProducts()
 
 <template>
     <h1 class="font-bold text-2xl">Товари</h1>
+    <p class="text-end"><strong>Загальна сума:</strong> {{ productSUM.toFixed(2) }} $</p>
     <div class="flex justify-between my-6">
         <input v-model="search" @input="onSearchInput(search)"
             class="border border-gray-400 w-1/4 p-1 rounded hover:border-gray-500 transition" placeholder="Пошук..." />
@@ -266,7 +274,7 @@ loadProducts()
                 <td class="p-2 border-x border-b border-gray-400">{{ product.quantity }}</td>
                 <td class="p-2 border-x border-b border-gray-400">{{ product.price }} $</td>
                 <td class="p-2 border-x border-b border-gray-400">
-                    {{ (product.quantity || 0) * (product.price || 0) }} $
+                    {{ ((product.quantity || 0) * (product.price || 0)).toFixed(2) }} $
                 </td>
                 <td class="p-2 w-70 border-b border-gray-400">
                     <div class="space-x-2 text-white">
