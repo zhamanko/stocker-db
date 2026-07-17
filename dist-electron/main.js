@@ -138,9 +138,9 @@ const OperationRepo = {
     const trx = db.transaction(() => {
       const result = db.prepare(
         `
-      INSERT INTO operations (type, date, comment)
-      VALUES (?, ?, ?)
-    `
+            INSERT INTO operations (type, date, comment)
+            VALUES (?, ?, ?)
+          `
       ).run(
         operation.type,
         operation.date ?? (/* @__PURE__ */ new Date()).toISOString(),
@@ -150,23 +150,34 @@ const OperationRepo = {
       for (const item of operation.items) {
         const product = db.prepare(
           `
-        SELECT code, name, category, quantity
-        FROM products
-        WHERE id = ?
-      `
+              SELECT code, name, category, quantity
+              FROM products
+              WHERE id = ?
+            `
         ).get(item.product_id);
         if (!product) {
-          throw new Error("Товар не знайдено");
+          throw new Error(
+            `Товар з id ${item.product_id} не знайдено`
+          );
         }
         if (operation.type === "out" && product.quantity < item.quantity) {
-          throw new Error("Недостатньо товару на складі");
+          throw new Error(
+            `Недостатньо товару "${product.name}" на складі`
+          );
         }
         db.prepare(
           `
-        INSERT INTO operation_items
-        (operation_id, code, name, category, quantity, price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `
+            INSERT INTO operation_items
+              (
+                operation_id,
+                code,
+                name,
+                category,
+                quantity,
+                price
+              )
+            VALUES (?, ?, ?, ?, ?, ?)
+          `
         ).run(
           operationId,
           product.code,
@@ -175,32 +186,45 @@ const OperationRepo = {
           item.quantity,
           item.price
         );
-        const delta = operation.type === "in" ? item.quantity : -item.quantity;
-        db.prepare(
+        const quantityDelta = operation.type === "in" ? item.quantity : -item.quantity;
+        const updateResult = db.prepare(
           `
-        UPDATE products
-        SET quantity = quantity + ?
-        WHERE id = ?
-      `
-        ).run(delta, item.product_id);
+              UPDATE products
+              SET quantity = quantity + ?
+              WHERE id = ?
+            `
+        ).run(quantityDelta, item.product_id);
+        if (updateResult.changes === 0) {
+          throw new Error(
+            `Не вдалося оновити товар з id ${item.product_id}`
+          );
+        }
       }
       return operationId;
     });
     return trx();
   },
-  getList(params) {
-    const { limit = 30, offset = 0, type, from, to, search } = params;
+  getList(params = {}) {
+    const {
+      limit = 30,
+      offset = 0,
+      type,
+      from,
+      to,
+      search
+    } = params;
     let query = `
-    SELECT
-      o.id,
-      o.type,
-      o.date,
-      o.comment,
-      COALESCE(SUM(oi.quantity * oi.price), 0) AS total
-    FROM operations o
-    LEFT JOIN operation_items oi ON o.id = oi.operation_id
-    WHERE 1=1
-  `;
+      SELECT
+        o.id,
+        o.type,
+        o.date,
+        o.comment,
+        COALESCE(SUM(oi.quantity * oi.price), 0) AS total
+      FROM operations o
+      LEFT JOIN operation_items oi
+        ON o.id = oi.operation_id
+      WHERE 1 = 1
+    `;
     const args = [];
     if (type) {
       query += ` AND o.type = ?`;
@@ -215,22 +239,34 @@ const OperationRepo = {
       args.push(to);
     }
     if (search) {
-      query += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
-      args.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      query += `
+        AND (
+          oi.code LIKE ?
+          OR oi.name LIKE ?
+          OR oi.category LIKE ?
+        )
+      `;
+      const searchValue = `%${search}%`;
+      args.push(
+        searchValue,
+        searchValue,
+        searchValue
+      );
     }
     query += `
-    GROUP BY o.id
-    ORDER BY o.date DESC
-    LIMIT ? OFFSET ?
-  `;
+      GROUP BY o.id
+      ORDER BY o.date DESC
+      LIMIT ? OFFSET ?
+    `;
     args.push(limit, offset);
     const items = db.prepare(query).all(...args);
     let totalQuery = `
-    SELECT COUNT(DISTINCT o.id) as count
-    FROM operations o
-    LEFT JOIN operation_items oi ON o.id = oi.operation_id
-    WHERE 1=1
-  `;
+      SELECT COUNT(DISTINCT o.id) AS count
+      FROM operations o
+      LEFT JOIN operation_items oi
+        ON o.id = oi.operation_id
+      WHERE 1 = 1
+    `;
     const totalArgs = [];
     if (type) {
       totalQuery += ` AND o.type = ?`;
@@ -245,36 +281,129 @@ const OperationRepo = {
       totalArgs.push(to);
     }
     if (search) {
-      totalQuery += ` AND (oi.code LIKE ? OR oi.name LIKE ? OR oi.category LIKE ?)`;
-      totalArgs.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      totalQuery += `
+        AND (
+          oi.code LIKE ?
+          OR oi.name LIKE ?
+          OR oi.category LIKE ?
+        )
+      `;
+      const searchValue = `%${search}%`;
+      totalArgs.push(
+        searchValue,
+        searchValue,
+        searchValue
+      );
     }
-    const { count = 0 } = db.prepare(totalQuery).get(...totalArgs);
-    return { items, total: count };
+    const totalResult = db.prepare(totalQuery).get(...totalArgs);
+    return {
+      items,
+      total: totalResult.count ?? 0
+    };
   },
   getItems(operationId) {
     return db.prepare(
       `
-    SELECT
-      id,
-      code as product_code,
-      name as product_name,
-      category as product_category,
-      quantity,
-      price,
-      (quantity * price) as total
-    FROM operation_items
-    WHERE operation_id = ?
-  `
+          SELECT
+            id,
+            code AS product_code,
+            name AS product_name,
+            category AS product_category,
+            quantity,
+            price,
+            quantity * price AS total
+          FROM operation_items
+          WHERE operation_id = ?
+        `
     ).all(operationId);
   },
   deleteOperation(operationId) {
-    const trx = db.transaction(() => {
-      db.prepare(`DELETE FROM operation_items WHERE operation_id = ?`).run(
-        operationId
-      );
-      db.prepare(`DELETE FROM operations WHERE id = ?`).run(operationId);
-    });
-    return trx();
+    const trx = db.transaction(
+      (id) => {
+        const operation = db.prepare(
+          `
+              SELECT id, type
+              FROM operations
+              WHERE id = ?
+            `
+        ).get(id);
+        if (!operation) {
+          throw new Error(
+            `Операцію з id ${id} не знайдено`
+          );
+        }
+        const items = db.prepare(
+          `
+              SELECT code, quantity
+              FROM operation_items
+              WHERE operation_id = ?
+            `
+        ).all(id);
+        const increaseProductQuantity = db.prepare(
+          `
+            UPDATE products
+            SET quantity = quantity + ?
+            WHERE code = ?
+          `
+        );
+        const decreaseProductQuantity = db.prepare(
+          `
+            UPDATE products
+            SET quantity = quantity - ?
+            WHERE code = ?
+              AND quantity >= ?
+          `
+        );
+        for (const item of items) {
+          let changes = 0;
+          if (operation.type === "out") {
+            const result = increaseProductQuantity.run(
+              item.quantity,
+              item.code
+            );
+            changes = result.changes;
+          } else if (operation.type === "in") {
+            const result = decreaseProductQuantity.run(
+              item.quantity,
+              item.code,
+              item.quantity
+            );
+            changes = result.changes;
+          } else {
+            throw new Error(
+              `Невідомий тип операції: ${operation.type}`
+            );
+          }
+          if (changes === 0) {
+            throw new Error(
+              `Не вдалося оновити товар з кодом "${item.code}". Товар не знайдено або на складі недостатньо залишку.`
+            );
+          }
+        }
+        db.prepare(
+          `
+            DELETE FROM operation_items
+            WHERE operation_id = ?
+          `
+        ).run(id);
+        const deleteOperationResult = db.prepare(
+          `
+              DELETE FROM operations
+              WHERE id = ?
+            `
+        ).run(id);
+        if (deleteOperationResult.changes === 0) {
+          throw new Error(
+            `Не вдалося видалити операцію з id ${id}`
+          );
+        }
+        return {
+          deletedOperationId: id,
+          restoredItemsCount: items.length
+        };
+      }
+    );
+    return trx(operationId);
   }
 };
 ipcMain.handle("products:getSUM", () => {
