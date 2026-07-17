@@ -14,7 +14,7 @@ type massageType = {
 const massageIsOpen = ref<boolean>(false)
 const massageArr = ref<massageType | null>(null)
 
-const productSUM = ref<number>(0)
+const productSUM = ref(0);
 
 let searchTimeout: number | null = null
 
@@ -135,7 +135,7 @@ loadProducts()
 
 <template>
     <h1 class="font-bold text-2xl">Товари</h1>
-    <p class="text-end"><strong>Загальна сума:</strong> {{ productSUM.toFixed(2) }} $</p>
+    <p class="text-end"><strong>Загальна сума:</strong> {{ ((productSUM ?? 0).toFixed(2)) }} $</p>
     <div class="flex justify-between my-6">
         <input v-model="search" @input="onSearchInput(search)"
             class="border border-gray-400 w-1/4 p-1 rounded hover:border-gray-500 transition" placeholder="Пошук..." />
