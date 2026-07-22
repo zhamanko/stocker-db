@@ -36,6 +36,12 @@ contextBridge.exposeInMainWorld("api", {
 
   getOperationItems: (operationId: number) =>
     ipcRenderer.invoke("operations:getItems", operationId),
+  updateOperation: (operationId: number, operation: {
+    type: string;
+    items: { product_id: number; quantity: number; price: number }[];
+    date: string;
+    comment?: string;
+  }) => ipcRenderer.invoke("operations:update", operationId, operation),
   deleteOperation: (operationId: number) =>
     ipcRenderer.invoke("operations:delete", operationId),
 });

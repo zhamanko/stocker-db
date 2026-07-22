@@ -17,5 +17,6 @@ electron.contextBridge.exposeInMainWorld("api", {
   addOperation: (operation) => electron.ipcRenderer.invoke("operation:add", operation),
   getOperations: (params) => electron.ipcRenderer.invoke("operations:list", params),
   getOperationItems: (operationId) => electron.ipcRenderer.invoke("operations:getItems", operationId),
+  updateOperation: (operationId, operation) => electron.ipcRenderer.invoke("operations:update", operationId, operation),
   deleteOperation: (operationId) => electron.ipcRenderer.invoke("operations:delete", operationId)
 });

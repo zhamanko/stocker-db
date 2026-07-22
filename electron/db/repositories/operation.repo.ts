@@ -60,6 +60,7 @@ type OperationForDelete = {
 };
 
 type OperationItemForDelete = {
+  product_id: number | null;
   code: string;
   quantity: number;
 };
@@ -111,16 +112,18 @@ export const OperationRepo = {
             INSERT INTO operation_items
               (
                 operation_id,
+                product_id,
                 code,
                 name,
                 category,
                 quantity,
                 price
               )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
           `
         ).run(
           operationId,
+          item.product_id,
           product.code,
           product.name,
           product.category,
@@ -154,6 +157,70 @@ export const OperationRepo = {
     });
 
     return trx();
+  },
+
+  update(operationId: number, operation: ProductCheck): void {
+    const trx = db.transaction(() => {
+      if (operation.type !== "in" && operation.type !== "out") {
+        throw new Error("Невідомий тип операції");
+      }
+      if (operation.items.length === 0) {
+        throw new Error("Операція має містити щонайменше одну позицію");
+      }
+
+      const previousOperation = db
+        .prepare("SELECT id, type FROM operations WHERE id = ?")
+        .get(operationId) as OperationForDelete | undefined;
+      if (!previousOperation) {
+        throw new Error(`Операцію з id ${operationId} не знайдено`);
+      }
+
+      const previousItems = db
+        .prepare("SELECT product_id, code, quantity FROM operation_items WHERE operation_id = ?")
+        .all(operationId) as OperationItemForDelete[];
+
+      for (const item of previousItems) {
+        const productClause = item.product_id == null ? "code = ?" : "id = ?";
+        const productReference = item.product_id ?? item.code;
+        const delta = previousOperation.type === "out" ? item.quantity : -item.quantity;
+        const result = db
+          .prepare(`UPDATE products SET quantity = quantity + ? WHERE ${productClause} AND quantity + ? >= 0`)
+          .run(delta, productReference, delta);
+        if (result.changes === 0) {
+          throw new Error("Неможливо скасувати попередній стан операції: товар не знайдено або недостатньо залишку");
+        }
+      }
+
+      db.prepare("DELETE FROM operation_items WHERE operation_id = ?").run(operationId);
+      db.prepare("UPDATE operations SET type = ?, date = ?, comment = ? WHERE id = ?").run(
+        operation.type,
+        operation.date ?? new Date().toISOString(),
+        operation.comment ?? null,
+        operationId
+      );
+
+      for (const item of operation.items) {
+        if (!Number.isInteger(item.product_id) || item.quantity <= 0 || item.price < 0) {
+          throw new Error("Вкажіть товар, додатну кількість і невід’ємну ціну для кожної позиції");
+        }
+        const product = db
+          .prepare("SELECT code, name, category, quantity FROM products WHERE id = ?")
+          .get(item.product_id) as ProductRow | undefined;
+        if (!product) throw new Error(`Товар з id ${item.product_id} не знайдено`);
+        if (operation.type === "out" && product.quantity < item.quantity) {
+          throw new Error(`Недостатньо товару "${product.name}" на складі`);
+        }
+
+        db.prepare(
+          "INSERT INTO operation_items (operation_id, product_id, code, name, category, quantity, price) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).run(operationId, item.product_id, product.code, product.name, product.category, item.quantity, item.price);
+        db.prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?").run(
+          operation.type === "in" ? item.quantity : -item.quantity,
+          item.product_id
+        );
+      }
+    });
+    trx();
   },
 
   getList(
@@ -292,6 +359,7 @@ export const OperationRepo = {
         `
           SELECT
             id,
+            product_id,
             code AS product_code,
             name AS product_name,
             category AS product_category,
@@ -329,7 +397,7 @@ export const OperationRepo = {
         const items = db
           .prepare(
             `
-              SELECT code, quantity
+              SELECT product_id, code, quantity
               FROM operation_items
               WHERE operation_id = ?
             `

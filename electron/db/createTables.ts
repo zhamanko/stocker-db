@@ -45,6 +45,7 @@ export function createTables(db: Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
         operation_id INTEGER NOT NULL, 
+        product_id INTEGER,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
@@ -56,5 +57,15 @@ export function createTables(db: Database) {
     console.log('✅ Table "operation_items" created');
   } else {
     console.log('ℹ️ Table "operation_items" already exists');
+    const columns = db.prepare("PRAGMA table_info(operation_items)").all() as { name: string }[];
+    if (!columns.some((column) => column.name === "product_id")) {
+      db.exec("ALTER TABLE operation_items ADD COLUMN product_id INTEGER");
+    }
+    db.exec(`
+      UPDATE operation_items
+      SET product_id = (SELECT id FROM products WHERE products.code = operation_items.code)
+      WHERE product_id IS NULL
+        AND 1 = (SELECT COUNT(*) FROM products WHERE products.code = operation_items.code);
+    `);
   }
 }

@@ -11,6 +11,11 @@ export async function createOperation(operation: ProductCheck) {
   return res.id
 }
 
+export async function updateOperation(operationId: number, operation: ProductCheck) {
+  const res = await api.updateOperation(operationId, operation)
+  if (!res.success) throw new Error(res.message)
+}
+
 export async function getOperations(params:any) {
   return await api.getOperations(params);
 }

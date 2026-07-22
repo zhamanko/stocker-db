@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { OperationRow, OperationItemView } from "../api/api";
-import { getOperationItems, getOperations, deleteOperation } from '../service/operation.service'
+import { OperationRow, OperationItemView, ProductCheck } from "../api/api";
+import { getOperationItems, getOperations, deleteOperation, updateOperation } from '../service/operation.service'
 import Messenge from '../components/Messenge.vue';
+import OperationEditForm from '../components/OperationEditForm.vue';
 
 type massageType = {
     massage: string,
@@ -40,6 +41,7 @@ async function userResponse(data: { confirmed: boolean, id?: number }) {
 // --- Данні ---
 const operations = ref<OperationRow[]>([]);
 const operationItemsMap = ref<Record<number, OperationItemView[]>>({});
+const editingOperation = ref<OperationRow | null>(null);
 const total = ref(0);
 const currentPage = computed(() => {
     return Math.floor(offset.value / limit) + 1;
@@ -77,6 +79,17 @@ async function loadOperations() {
     for (const op of operations.value) {
         const items = await getOperationItems(op.id);
         operationItemsMap.value[op.id] = items;
+    }
+}
+
+async function saveOperation(operation: ProductCheck) {
+    if (!editingOperation.value) return;
+    try {
+        await updateOperation(editingOperation.value.id, operation);
+        editingOperation.value = null;
+        await loadOperations();
+    } catch (e: any) {
+        showMassage(e.message, 'info');
     }
 }
 
@@ -182,8 +195,11 @@ onMounted(loadOperations);
                 <div class="flex justify-between">
                     <h2 class="font-bold text-lg">{{ op.type === "in" ? 'Приход' : 'Продаж' }}</h2>
                     <span>{{ formatDate(op.date) }}</span>
-                    <button @click="showMassage('Ви дійсно хочете видалити цей запис?', 'confirm', op.id)"
-                        class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
+                    <div class="space-x-2">
+                        <button @click="editingOperation = op" class="bg-blue-500 px-4 py-1 rounded hover:bg-blue-600 transition text-white">Редагувати</button>
+                        <button @click="showMassage('Ви дійсно хочете видалити цей запис?', 'confirm', op.id)"
+                            class="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition text-white">Видалити</button>
+                    </div>
                 </div>
                 <table class="w-full">
                     <thead>
@@ -237,8 +253,11 @@ onMounted(loadOperations);
         </div>
     </div>
 
-    <Messenge v-if="messageShow && messageState" 
-    :massage="messageState.massage" 
-    :type="messageState.type"
-    :id="messageState.id" @user-response="userResponse" />
+    <OperationEditForm v-if="editingOperation" :operation="editingOperation"
+        :items="operationItemsMap[editingOperation.id] || []" @close="editingOperation = null" @save="saveOperation" />
+
+    <Messenge v-if="messageShow && messageState"
+        :massage="messageState.massage"
+        :type="messageState.type"
+        :id="messageState.id" @user-response="userResponse" />
 </template>

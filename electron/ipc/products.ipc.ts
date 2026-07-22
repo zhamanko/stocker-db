@@ -62,6 +62,15 @@ ipcMain.handle('operations:getItems', (_e, operationId) => {
   return OperationRepo.getItems(operationId);
 });
 
+ipcMain.handle('operations:update', (_e, operationId, operation) => {
+  try {
+    OperationRepo.update(operationId, operation);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+});
+
 ipcMain.handle('operations:delete', (_e, operationId) => {
   return OperationRepo.deleteOperation(operationId);
 })

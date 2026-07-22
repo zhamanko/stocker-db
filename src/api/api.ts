@@ -35,6 +35,7 @@ export type OperationRow = {
 
 export type OperationItemView = {
   id: number;
+  product_id: number | null;
   product_code: string;
   product_name: string;
   product_category: string;
@@ -75,6 +76,7 @@ declare global {
         offset?: number;
       }) => Promise<OperationListResponse>;
       getOperationItems: (operationId: number) => Promise<OperationItemView[]>;
+      updateOperation: (operationId: number, operation: ProductCheck) => Promise<{ success: boolean; message?: string }>;
       deleteOperation: (operationId: number) => Promise<void>;
       getSUM: () => Promise<{ total: number }>;
     };
@@ -113,6 +115,8 @@ export const api = {
   }): Promise<OperationListResponse> => window.api.getOperations(params),
   getOperationItems: (operationId: number): Promise<OperationItemView[]> =>
     window.api.getOperationItems(operationId),
+  updateOperation: (operationId: number, operation: ProductCheck): Promise<{ success: boolean; message?: string }> =>
+    window.api.updateOperation(operationId, operation),
   deleteOperation: (id: number): Promise<void> =>
     window.api.deleteOperation(id),
 };
